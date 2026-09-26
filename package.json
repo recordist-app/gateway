@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "recordist-gateway": "./dist/cli.js"
+    "recordist-gateway": "dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -53,7 +53,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/recordist-app/gateway.git"
+    "url": "git+https://github.com/recordist-app/gateway.git"
   },
   "homepage": "https://recordist.app/developers/mcp",
   "bugs": {
