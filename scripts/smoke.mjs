@@ -1,0 +1,14 @@
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+const t = new StdioClientTransport({ command: "node", args: [new URL("../dist/cli.js", import.meta.url).pathname] });
+const c = new Client({ name: "smoke", version: "0" });
+await c.connect(t);
+const tools = await c.listTools();
+console.log("tools:", tools.tools.map((x) => x.name).join(", "));
+const r = await c.callTool({ name: "search_meetings", arguments: { query: "lifetime plan" } });
+console.log("search:", String(r.content?.[0]?.text ?? JSON.stringify(r)).slice(0, 400));
+const l = await c.callTool({ name: "list_meetings", arguments: { limit: 3 } });
+console.log("list:", String(l.content?.[0]?.text ?? "").slice(0, 300));
+const res = await c.listResources();
+console.log("resources:", res.resources.length);
+await c.close();
