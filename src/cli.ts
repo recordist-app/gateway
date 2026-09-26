@@ -9,6 +9,8 @@
  *   recordist-gateway --doctor   diagnose data dir / DB / token / app reachability
  *   recordist-gateway --version
  */
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { existsSync, statSync } from "node:fs";
 
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -217,8 +219,16 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
 
 const isDirectRun = (() => {
   try {
+    // npm installs the command as a symlink (node_modules/.bin/recordist-gateway → dist/cli.js), so
+    // resolve the real path before comparing; the old basename check failed through the shim and
+    // the server silently did nothing when launched with `npx -y @recordist/gateway`.
     const entry = process.argv[1];
-    return Boolean(entry && import.meta.url.endsWith(entry.replace(/\\/g, "/").split("/").pop()!));
+    if (!entry) return false;
+    const self = fileURLToPath(import.meta.url);
+    let real = entry;
+    try { real = realpathSync(entry); } catch { /* keep as is */ }
+    if (real === self) return true;
+    return self.endsWith(entry.replace(/\\/g, "/").split("/").pop()!);
   } catch {
     return false;
   }
