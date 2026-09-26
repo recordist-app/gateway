@@ -53,11 +53,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/recordist/gateway.git"
+    "url": "https://github.com/recordist-app/gateway.git"
   },
   "homepage": "https://recordist.app/developers/mcp",
   "bugs": {
-    "url": "https://github.com/recordist/gateway/issues",
+    "url": "https://github.com/recordist-app/gateway/issues",
     "email": "support@recordist.app"
   },
   "author": "Recordist (Havihi Digital Inc.)"
