@@ -1,0 +1,64 @@
+{
+  "name": "@recordist/gateway",
+  "version": "0.1.0",
+  "description": "MCP server + A2A agent that lets AI assistants read and act on meetings captured by Recordist.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "recordist-gateway": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "recordist",
+    "mcp",
+    "model-context-protocol",
+    "a2a",
+    "meetings",
+    "transcripts"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "better-sqlite3": "^13.0.3",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.11"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/recordist/gateway.git"
+  },
+  "homepage": "https://recordist.app/developers/mcp",
+  "bugs": {
+    "url": "https://github.com/recordist/gateway/issues",
+    "email": "support@recordist.app"
+  },
+  "author": "Recordist (Havihi Digital Inc.)"
+}
