@@ -60,5 +60,6 @@
     "url": "https://github.com/recordist-app/gateway/issues",
     "email": "support@recordist.app"
   },
-  "author": "Recordist (Havihi Digital Inc.)"
+  "author": "Recordist (Havihi Digital Inc.)",
+  "mcpName": "io.github.recordist-app/gateway"
 }
