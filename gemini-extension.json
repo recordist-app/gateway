@@ -1,0 +1,8 @@
+{
+  "name": "recordist",
+  "version": "0.1.0",
+  "description": "Search and read the meetings recorded by Recordist on this computer; loopback only.",
+  "mcpServers": {
+    "recordist": { "command": "npx", "args": ["-y", "@recordist/gateway"] }
+  }
+}
