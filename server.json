@@ -1,26 +1,28 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
-  "name": "io.github.recordist-app/gateway",
-  "description": "Read and act on meetings recorded by Recordist on your own computer: search, transcripts, action items, notes; loopback only.",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "app.recordist/gateway",
+  "description": "Search and read meetings recorded by Recordist on your own computer. Loopback only.",
   "repository": {
     "url": "https://github.com/recordist-app/gateway",
     "source": "github"
   },
-  "version_detail": {
-    "version": "0.1.1"
-  },
+  "websiteUrl": "https://recordist.app/developers/mcp",
+  "version": "0.1.2",
   "packages": [
     {
-      "registry_name": "npm",
-      "name": "@recordist/gateway",
-      "version": "0.1.1",
-      "runtime_hint": "npx",
-      "package_arguments": [],
-      "environment_variables": [
+      "registryType": "npm",
+      "identifier": "@recordist/gateway",
+      "version": "0.1.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
         {
           "name": "RECORDIST_API_URL",
           "description": "Local API base URL (default http://127.0.0.1:47321)",
-          "is_required": false
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
         }
       ]
     }
