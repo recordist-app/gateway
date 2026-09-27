@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "recordist": {
+      "command": "npx",
+      "args": ["-y", "@recordist/gateway"]
+    }
+  }
+}

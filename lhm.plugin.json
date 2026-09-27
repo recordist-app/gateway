@@ -1,0 +1,22 @@
+{
+  "identifier": "recordist-gateway",
+  "name": "Recordist",
+  "version": "0.1.2",
+  "description": "Read your Recordist meeting recordings, transcripts, notes and action items from your own computer. Nothing leaves the machine.",
+  "category": "productivity",
+  "homepage": "https://recordist.app",
+  "icon": "https://raw.githubusercontent.com/recordist-app/gateway/main/media/logo-400.png",
+  "tags": ["meetings", "transcripts", "notes", "local", "privacy"],
+  "artifacts": { "npm": { "packageName": "@recordist/gateway" } },
+  "tools": [
+    { "name": "list_meetings", "description": "List recorded meetings, newest first." },
+    { "name": "get_meeting", "description": "Get one meeting with its notes and action items." },
+    { "name": "get_transcript", "description": "Read a meeting's transcript." },
+    { "name": "search_meetings", "description": "Full-text search across transcripts and notes." },
+    { "name": "get_action_items", "description": "List open action items across meetings." },
+    { "name": "start_recording", "description": "Start a recording (the app still asks the person to confirm)." },
+    { "name": "stop_recording", "description": "Stop the current recording." },
+    { "name": "add_marker", "description": "Add a marker at the current moment of a recording." },
+    { "name": "regenerate_notes", "description": "Regenerate a meeting's notes with a template." }
+  ]
+}

@@ -1,0 +1,10 @@
+# Smithery configuration (legacy shape kept for tools that still read it): https://smithery.ai/docs
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties: {}
+    description: No configuration required. Talks only to the Recordist app on 127.0.0.1.
+  commandFunction: |-
+    (config) => ({ command: 'npx', args: ['-y', '@recordist/gateway'] })
+  exampleConfig: {}
