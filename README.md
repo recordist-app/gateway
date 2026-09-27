@@ -1,8 +1,11 @@
 # @recordist/gateway
 
-MCP server + A2A agent for **Recordist** — the bot-free, local-first meeting
-companion. Lets Claude Desktop, Claude Code, Cursor and other agents read and
-act on the meetings recorded on your machine.
+MCP server + A2A agent for **Recordist**, the meeting notetaker that runs on your
+own computer with no bot in the call and no upload. It lets Claude Desktop, Claude
+Code, Cursor and other agents read and act on the meetings recorded on your machine.
+
+Recordist itself is opening in small waves: ask for a place at
+**https://recordist.app/early-access** (Mac today; Windows and Linux in early access).
 
 - **Reads** (list, get, transcript, search, action items) work whether or not the
   Recordist app is running: the gateway talks to the app's local API when it is
