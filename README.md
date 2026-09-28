@@ -1,5 +1,7 @@
 # @recordist/gateway
 
+[![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/recordist-app/gateway) [![Glama score](https://glama.ai/mcp/servers/recordist-app/gateway/badges/score.svg)](https://glama.ai/mcp/servers/recordist-app/gateway)
+
 MCP server + A2A agent for **Recordist**, the meeting notetaker that runs on your
 own computer with no bot in the call and no upload. It lets Claude Desktop, Claude
 Code, Cursor and other agents read and act on the meetings recorded on your machine.
