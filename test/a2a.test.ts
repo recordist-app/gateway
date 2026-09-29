@@ -1,4 +1,4 @@
-import type http from "node:http";
+import http from "node:http";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createA2AServer } from "../src/a2a.js";
@@ -137,4 +137,18 @@ describe("A2A server", () => {
     const wrongPath = await fetch(`${base}whatever`);
     expect(wrongPath.status).toBe(404);
   });
+  it("rejects a foreign Host, an unlisted Origin, and a non-JSON POST", async () => {
+    const port = Number(new URL(base).port);
+    const rpc = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tasks/get", params: { id: "nope" } });
+    const raw = (headers: Record<string, string>, body?: string, path = "/"): Promise<number> => new Promise((resolve, reject) => {
+      const req = http.request({ host: "127.0.0.1", port, path, method: body === undefined ? "GET" : "POST", headers }, (res) => { res.resume(); res.on("end", () => resolve(res.statusCode ?? 0)); });
+      req.on("error", reject); if (body !== undefined) req.write(body); req.end();
+    });
+    expect(await raw({ host: "evil.example", "content-type": "application/json" }, rpc)).toBe(403);
+    expect(await raw({ host: `127.0.0.1:${port}`, origin: "https://evil.example", "content-type": "application/json" }, rpc)).toBe(403);
+    expect(await raw({ host: `127.0.0.1:${port}`, "content-type": "text/plain" }, rpc)).toBe(415);
+    expect(await raw({ host: "evil.example" }, undefined, "/.well-known/agent.json")).toBe(403);
+    expect(await raw({ host: `localhost:${port}`, "content-type": "application/json" }, rpc)).toBe(200);
+  });
+
 });

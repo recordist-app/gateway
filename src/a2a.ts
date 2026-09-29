@@ -181,6 +181,8 @@ export interface A2AServerOptions {
   version: string;
   port?: number;
   host?: string;
+  /** Origins (scheme://host:port) allowed to call from a browser context; none by default. */
+  allowedOrigins?: string[];
   log?: (msg: string) => void;
   /** Max tasks kept in memory (oldest evicted). */
   maxTasks?: number;
@@ -307,8 +309,34 @@ export function createA2AServer(opts: A2AServerOptions): http.Server {
   const agent = new A2AAgent(opts.data, opts.maxTasks);
   const card = buildAgentCard({ url: `http://${host}:${port}/`, version: opts.version });
 
-  return http.createServer(async (req, res) => {
-    const url = new URL(req.url ?? "/", `http://${host}:${port}`);
+  const server = http.createServer(async (req, res) => {
+    let url: URL;
+    try { url = new URL(req.url ?? "/", `http://${host}:${port}`); } catch { sendJson(res, 400, { error: { code: "bad_request", message: "Unparsable request path" } }); return; }
+
+    // Browser-side protection. A web page can send a simple cross-origin POST (text/plain) to a
+    // loopback port, and a DNS-rebinding page can read responses when the Host is not checked.
+    // Same three rules as the MCP transport: Host must be ours, an Origin must be allow-listed,
+    // and a JSON-RPC POST must say it is JSON.
+    const addr = server.address();
+    const bound = typeof addr === "object" && addr ? addr.port : port;
+    const hostOk = [host, "localhost", "127.0.0.1", `${host}:${bound}`, `localhost:${bound}`, `127.0.0.1:${bound}`, `[::1]:${bound}`, "[::1]"];
+    const reqHost = (req.headers.host ?? "").toLowerCase();
+    if (!hostOk.includes(reqHost)) {
+      sendJson(res, 403, { error: { code: "forbidden", message: `Host ${reqHost || "(none)"} is not this server` } });
+      return;
+    }
+    const origin = req.headers.origin;
+    if (origin !== undefined) {
+      const allowedOrigins = opts.allowedOrigins ?? [];
+      if (!allowedOrigins.includes(origin)) {
+        sendJson(res, 403, { error: { code: "forbidden", message: "Origin not allowed" } });
+        return;
+      }
+    }
+    if (req.method === "POST" && !String(req.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) {
+      sendJson(res, 415, { error: { code: "unsupported_media_type", message: "Content-Type must be application/json" } });
+      return;
+    }
 
     if (req.method === "GET" && (url.pathname === "/.well-known/agent.json" || url.pathname === "/.well-known/agent-card.json")) {
       sendJson(res, 200, card);
@@ -387,4 +415,5 @@ export function createA2AServer(opts: A2AServerOptions): http.Server {
       sendJson(res, status, rpcError(id, err));
     }
   });
+  return server;
 }
