@@ -134,6 +134,8 @@ export interface Health {
   ok: boolean;
   version: string;
   recording: { active: boolean; meeting_id?: string };
+  /** False when the app answered its minimal, unauthenticated health (token missing or not accepted). */
+  authenticated: boolean;
 }
 
 export interface ListMeetingsOptions {
