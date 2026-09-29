@@ -146,6 +146,7 @@ export class SqliteReader implements RecordistData {
       ok: true,
       version: "sqlite-readonly",
       recording: { active: Boolean(rec) },
+      authenticated: true,
     };
     if (rec) base.recording.meeting_id = String(rec.id);
     return base;

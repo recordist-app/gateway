@@ -137,10 +137,12 @@ export class ApiClient implements RecordistData {
   /** Health probe with a short timeout. Throws on any failure. */
   async health(): Promise<Health> {
     const h = await this.request<Health>("GET", "/v1/health", { timeoutMs: this.healthTimeoutMs });
+    // Without an accepted bearer token the app answers only { ok, version }: reachable, not usable.
     return {
       ok: Boolean(h.ok),
       version: String(h.version ?? "unknown"),
       recording: h.recording ?? { active: false },
+      authenticated: h.recording !== undefined,
     };
   }
 

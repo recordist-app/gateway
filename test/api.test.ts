@@ -102,7 +102,12 @@ describe("ApiClient", () => {
 
     const { fetchImpl } = mockFetch(() => ({ body: { ok: true, version: "1.2.3", recording: { active: false } } }));
     const ok = new ApiClient({ baseUrl: "http://127.0.0.1:47321", token: null, fetch: fetchImpl });
-    expect(await ok.health()).toEqual({ ok: true, version: "1.2.3", recording: { active: false } });
+    expect(await ok.health()).toEqual({ ok: true, version: "1.2.3", recording: { active: false }, authenticated: true });
     expect(await ok.isReachable()).toBe(true);
+
+    // Without an accepted token the app answers only { ok, version }: reachable, but not authenticated.
+    const minimal = mockFetch(() => ({ body: { ok: true, version: "1.2.3" } })).fetchImpl;
+    const anon = new ApiClient({ baseUrl: "http://127.0.0.1:47321", token: null, fetch: minimal });
+    expect(await anon.health()).toEqual({ ok: true, version: "1.2.3", recording: { active: false }, authenticated: false });
   });
 });

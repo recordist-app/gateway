@@ -115,8 +115,10 @@ export async function doctor(config: GatewayConfig = loadConfig()): Promise<{ te
   let healthLine = "unreachable (app not running?)";
   try {
     const h = await api.health();
-    reachable = h.ok;
-    healthLine = `ok — app v${h.version}, recording ${h.recording.active ? `active (${h.recording.meeting_id ?? "?"})` : "idle"}`;
+    reachable = h.ok && h.authenticated;
+    healthLine = h.authenticated
+      ? `ok — app v${h.version}, recording ${h.recording.active ? `active (${h.recording.meeting_id ?? "?"})` : "idle"}`
+      : `app v${h.version} answers, but the token was not accepted — ${config.apiToken ? `it changed (Remove everything issues a new one): copy ${config.tokenPath} again or set RECORDIST_API_TOKEN` : `no token: pair from Recordist → Settings → Integrations (8-digit code) or copy ${config.tokenPath}`}`;
   } catch (err) {
     healthLine = `unreachable — ${err instanceof Error ? err.message : String(err)}`;
   }
