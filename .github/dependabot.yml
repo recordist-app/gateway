@@ -4,6 +4,11 @@ updates:
     directory: /
     schedule: { interval: weekly }
     groups: { minor-and-patch: { update-types: [minor, patch] } }
+    ignore:
+      # The package supports Node 20 and later; its Node types stay on the 22 line so that a call
+      # which does not exist on the oldest supported runtime is a type error, not a surprise.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
