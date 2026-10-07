@@ -1,7 +1,7 @@
 {
   "identifier": "recordist-app-gateway",
   "name": "Recordist",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "description": "Read your Recordist meeting recordings, transcripts, notes and action items from your own computer. Nothing leaves the machine.",
   "category": "productivity",
   "homepage": "https://recordist.app",

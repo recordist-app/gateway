@@ -7,12 +7,12 @@
     "source": "github"
   },
   "websiteUrl": "https://recordist.app/developers/mcp",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@recordist/gateway",
-      "version": "0.1.2",
+      "version": "0.1.5",
       "transport": {
         "type": "stdio"
       },
