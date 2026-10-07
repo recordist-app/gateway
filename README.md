@@ -48,10 +48,13 @@ Windows: `%APPDATA%\Claude\`):
 claude mcp add recordist -- npx -y @recordist/gateway
 ```
 
-or, for the HTTP transport while `recordist-gateway --http` is running:
+or, for the HTTP transport while `recordist-gateway --http` is running (it needs
+the app's API token, see [Authentication](#authentication)):
 
 ```bash
-claude mcp add --transport http recordist http://127.0.0.1:47322/mcp
+TOKEN="$(cat ~/Library/Application\ Support/app.recordist.desktop/api_token)"
+claude mcp add --transport http recordist http://127.0.0.1:47322/mcp \
+  --header "Authorization: Bearer $TOKEN"
 ```
 
 ### Cursor
@@ -74,6 +77,21 @@ claude mcp add --transport http recordist http://127.0.0.1:47322/mcp
 ```bash
 recordist-gateway --http          # http://127.0.0.1:47322/mcp
 ```
+
+Send `Authorization: Bearer <api_token>` with every request.
+
+### Authentication
+
+The HTTP transport (`--http`) and the A2A agent (`--a2a`) answer only requests
+that carry `Authorization: Bearer <api_token>`, where the token is the contents
+of `<data>/api_token` (or `RECORDIST_API_TOKEN`), the same token the gateway
+uses for the app's local API. A missing or wrong token gets `401` with
+`WWW-Authenticate: Bearer` and nothing else. The one exception is the A2A Agent
+Card, which stays public so clients can discover the scheme; it lists skills
+only, never meetings. Neither mode starts when no token is available: open
+Recordist once so it writes `api_token`. The stdio transport needs no token,
+since only the assistant that launched it can talk to it. `--doctor` says
+whether `--http` and `--a2a` will require the token or refuse to start.
 
 ## What the assistant gets
 
@@ -103,16 +121,21 @@ recordist-gateway --http          # http://127.0.0.1:47322/mcp
 recordist-gateway --a2a           # http://127.0.0.1:47323/
 ```
 
-Agent Card at `http://127.0.0.1:47323/.well-known/agent.json`; skills mirror
-the tools above. JSON-RPC 2.0 at `/` with `tasks/send`, `tasks/get`,
-`tasks/cancel` and `tasks/sendSubscribe` (SSE).
+Agent Card at `http://127.0.0.1:47323/.well-known/agent.json` (public, no
+token; `authentication.schemes` is `["bearer"]`); skills mirror the tools above.
+JSON-RPC 2.0 at `/` with `tasks/send`, `tasks/get`, `tasks/cancel` and
+`tasks/sendSubscribe` (SSE); every JSON-RPC request needs
+`Authorization: Bearer <api_token>`.
 
 Natural-language tasks are routed to a skill with a small keyword router; every
 completed task returns a **text** part and a **data** part with the structured
 result. To skip the router, send a data part `{"skill": "...", "args": {...}}`.
 
 ```bash
+TOKEN="$(cat ~/Library/Application\ Support/app.recordist.desktop/api_token)"
+
 curl -s http://127.0.0.1:47323/ \
+  -H "Authorization: Bearer $TOKEN" \
   -H 'content-type: application/json' \
   -d '{
     "jsonrpc": "2.0", "id": 1, "method": "tasks/send",
@@ -125,14 +148,14 @@ curl -s http://127.0.0.1:47323/ \
   }' | jq .result.artifacts[0].parts
 
 # explicit skill call
-curl -s http://127.0.0.1:47323/ -H 'content-type: application/json' -d '{
+curl -s http://127.0.0.1:47323/ -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' -d '{
   "jsonrpc":"2.0","id":2,"method":"tasks/send",
   "params":{"message":{"role":"user","parts":[
     {"type":"data","data":{"skill":"get_transcript","args":{"meeting_id":"01J…","format":"srt"}}}
   ]}}}'
 
 # streaming
-curl -N http://127.0.0.1:47323/ -H 'content-type: application/json' -d '{
+curl -N http://127.0.0.1:47323/ -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' -d '{
   "jsonrpc":"2.0","id":3,"method":"tasks/sendSubscribe",
   "params":{"message":{"role":"user","parts":[{"type":"text","text":"list my meetings from today"}]}}}'
 ```
@@ -141,10 +164,10 @@ curl -N http://127.0.0.1:47323/ -H 'content-type: application/json' -d '{
 
 ```
 recordist-gateway                 MCP over stdio (default)
-recordist-gateway --http          MCP over Streamable HTTP on 127.0.0.1:47322/mcp
-recordist-gateway --a2a           A2A agent on 127.0.0.1:47323
+recordist-gateway --http          MCP over Streamable HTTP on 127.0.0.1:47322/mcp (bearer token)
+recordist-gateway --a2a           A2A agent on 127.0.0.1:47323 (bearer token)
 recordist-gateway --all           stdio + --http + --a2a
-recordist-gateway --doctor        diagnostics: data dir, DB, token, app reachability
+recordist-gateway --doctor        diagnostics: data dir, DB, token, app reachability, HTTP/A2A auth
 recordist-gateway --version
   --http-port <n>  --a2a-port <n>  --host <addr>
 ```
@@ -157,7 +180,7 @@ Logs go to stderr; stdout is reserved for the stdio MCP transport.
 |---|---|---|
 | `RECORDIST_DATA_DIR` | macOS `~/Library/Application Support/app.recordist.desktop`<br>Windows `%APPDATA%\app.recordist.desktop`<br>Linux `~/.local/share/app.recordist.desktop` | Where `recordist.db` and `api_token` live |
 | `RECORDIST_API_URL` | `http://127.0.0.1:47321` | Local API base URL |
-| `RECORDIST_API_TOKEN` | contents of `<data>/api_token` | Bearer token for the local API |
+| `RECORDIST_API_TOKEN` | contents of `<data>/api_token` | Bearer token for the local API, and the token `--http` and `--a2a` require from callers |
 
 ## How backend selection works
 
@@ -172,11 +195,32 @@ for search when present, with a `LIKE` fallback otherwise.
 - The gateway only ever binds `127.0.0.1` (`--host` exists for containers; do
   not expose it on a network interface). The Streamable HTTP transport enables
   DNS-rebinding protection and only accepts `Host: 127.0.0.1` / `localhost`.
+  The A2A agent accepts only its own Host, no browser Origin unless allow-listed,
+  and JSON-RPC POSTs only as `application/json`.
+- `--http` and `--a2a` require `Authorization: Bearer <api_token>` on every
+  request (the A2A Agent Card excepted), compared in constant time, so other
+  user accounts on the machine cannot read meetings through them. Programs
+  running under your own account can read `api_token`, so the token does not
+  separate them from you.
 - The API token is read from `<data>/api_token`, which the app writes with
   mode `0600`. `--doctor` warns if the file is group/world readable. Never commit
   or share it; anyone with the token can control recording on your machine.
 - The SQLite database is opened read-only; the gateway never modifies it.
 - No telemetry, no outbound network calls.
+
+## Changes in 0.1.5
+
+- `--http` and `--a2a` now require `Authorization: Bearer <api_token>` on every
+  request; a missing or wrong token gets `401`. The A2A Agent Card stays public
+  and now lists `authentication.schemes: ["bearer"]`. If you used either mode,
+  add the header to your client (see [Authentication](#authentication)). The
+  stdio transport is unchanged.
+- `--http` and `--a2a` refuse to start when no token is available
+  (`<data>/api_token` missing and `RECORDIST_API_TOKEN` unset).
+- `--doctor` reports whether `--http` and `--a2a` will require the token or
+  refuse to start, and where the token comes from.
+- The MCP HTTP transport answers `400` to an unparsable request path instead of
+  ending the process (the A2A agent already did since 0.1.3).
 
 ## Development
 

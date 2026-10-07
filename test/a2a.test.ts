@@ -7,16 +7,19 @@ import { listen } from "../src/http.js";
 import { TOOL_NAMES } from "../src/tools.js";
 import { createFixtureDb, IDS, type FixtureDb } from "./helpers/db.js";
 
+const TOKEN = "c".repeat(64);
+const AUTH = { authorization: `Bearer ${TOKEN}` };
+
 describe("A2A server", () => {
   let fx: FixtureDb;
   let reader: SqliteReader;
   let server: http.Server;
   let base: string;
 
-  const rpc = async (method: string, params: unknown, id: number | string = 1) => {
+  const rpc = async (method: string, params: unknown, id: number | string = 1, headers: Record<string, string> = AUTH) => {
     const res = await fetch(base, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...headers },
       body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
     });
     return { status: res.status, body: (await res.json()) as { result?: any; error?: { code: number; message: string } } };
@@ -25,7 +28,7 @@ describe("A2A server", () => {
   beforeAll(async () => {
     fx = createFixtureDb();
     reader = new SqliteReader({ dbPath: fx.dbPath });
-    server = createA2AServer({ data: reader, version: "1.2.3", port: 0 });
+    server = createA2AServer({ data: reader, version: "1.2.3", token: TOKEN, port: 0 });
     const { port } = await listen(server, 0);
     base = `http://127.0.0.1:${port}/`;
   });
@@ -35,10 +38,15 @@ describe("A2A server", () => {
     fx.cleanup();
   });
 
-  it("serves the agent card", async () => {
+  it("serves the agent card without a token, naming the bearer scheme and no meeting data", async () => {
     const res = await fetch(`${base}.well-known/agent.json`);
     expect(res.status).toBe(200);
-    const card = (await res.json()) as any;
+    const raw = await res.text();
+    for (const leak of [IDS.weekly, IDS.design, IDS.live, "Weekly sync", "Design review", "pricing deck", "Cleo"]) {
+      expect(raw).not.toContain(leak);
+    }
+    const card = JSON.parse(raw) as any;
+    expect(card.authentication).toEqual({ schemes: ["bearer"] });
     expect(card.name).toBe("Recordist");
     expect(card.version).toBe("1.2.3");
     expect(card.capabilities.streaming).toBe(true);
@@ -107,7 +115,7 @@ describe("A2A server", () => {
   it("tasks/sendSubscribe streams SSE status + artifact events", async () => {
     const res = await fetch(base, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...AUTH },
       body: JSON.stringify({
         jsonrpc: "2.0", id: 7, method: "tasks/sendSubscribe",
         params: { id: "t3", message: { role: "user", parts: [{ type: "text", text: `transcript of ${IDS.weekly} as txt` }] } },
@@ -129,14 +137,59 @@ describe("A2A server", () => {
     expect(nf.body.error?.code).toBe(-32601);
     const bad = await rpc("tasks/send", { message: { role: "user" } });
     expect(bad.body.error?.code).toBe(-32602);
-    const notJson = await fetch(base, { method: "POST", body: "{", headers: { "content-type": "application/json" } });
+    const notJson = await fetch(base, { method: "POST", body: "{", headers: { "content-type": "application/json", ...AUTH } });
     expect(notJson.status).toBe(400);
     expect(((await notJson.json()) as any).error.code).toBe(-32700);
-    const notRpc = await fetch(base, { method: "POST", body: JSON.stringify({ hello: 1 }), headers: { "content-type": "application/json" } });
+    const notRpc = await fetch(base, { method: "POST", body: JSON.stringify({ hello: 1 }), headers: { "content-type": "application/json", ...AUTH } });
     expect(((await notRpc.json()) as any).error.code).toBe(-32600);
-    const wrongPath = await fetch(`${base}whatever`);
+    const wrongPath = await fetch(`${base}whatever`, { headers: AUTH });
     expect(wrongPath.status).toBe(404);
   });
+
+  const expectUnauthorised = async (res: Response) => {
+    expect(res.status).toBe(401);
+    expect(res.headers.get("www-authenticate")).toBe("Bearer");
+    expect(await res.json()).toEqual({ error: "unauthorised" });
+  };
+  const sendBody = JSON.stringify({
+    jsonrpc: "2.0", id: 9, method: "tasks/send",
+    params: { id: "auth-1", message: { role: "user", parts: [{ type: "text", text: "What are my open action items?" }] } },
+  });
+
+  it("answers 401 with WWW-Authenticate and no detail when the token is missing", async () => {
+    await expectUnauthorised(await fetch(base, { method: "POST", headers: { "content-type": "application/json" }, body: sendBody }));
+    await expectUnauthorised(await fetch(base, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: sendBody.replace("tasks/send", "tasks/sendSubscribe"),
+    }));
+    await expectUnauthorised(await fetch(base));
+    await expectUnauthorised(await fetch(`${base}whatever`));
+    await expectUnauthorised(await fetch(base, { method: "POST", headers: { "content-type": "text/plain" }, body: sendBody }));
+    // tasks/get must not reveal a task created by an authorised caller.
+    await expectUnauthorised(await fetch(base, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tasks/get", params: { id: "t1" } }),
+    }));
+  });
+
+  it("answers 401 to a wrong token", async () => {
+    for (const authorization of [`Bearer ${"d".repeat(64)}`, `Bearer ${TOKEN}x`, `Bearer ${TOKEN.slice(1)}`, "Bearer ", `Basic ${TOKEN}`, TOKEN]) {
+      await expectUnauthorised(await fetch(base, { method: "POST", headers: { "content-type": "application/json", authorization }, body: sendBody }));
+    }
+  });
+
+  it("does the work with the right token", async () => {
+    const res = await fetch(base, { method: "POST", headers: { "content-type": "application/json", ...AUTH }, body: sendBody });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.result.status.state).toBe("completed");
+    expect(body.result.artifacts[0].parts[1].data.skill).toBe("get_action_items");
+    const index = await fetch(base, { headers: AUTH });
+    expect(((await index.json()) as any).ok).toBe(true);
+  });
+
   it("rejects a foreign Host, an unlisted Origin, and a non-JSON POST", async () => {
     const port = Number(new URL(base).port);
     const rpc = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tasks/get", params: { id: "nope" } });
@@ -144,11 +197,14 @@ describe("A2A server", () => {
       const req = http.request({ host: "127.0.0.1", port, path, method: body === undefined ? "GET" : "POST", headers }, (res) => { res.resume(); res.on("end", () => resolve(res.statusCode ?? 0)); });
       req.on("error", reject); if (body !== undefined) req.write(body); req.end();
     });
-    expect(await raw({ host: "evil.example", "content-type": "application/json" }, rpc)).toBe(403);
-    expect(await raw({ host: `127.0.0.1:${port}`, origin: "https://evil.example", "content-type": "application/json" }, rpc)).toBe(403);
-    expect(await raw({ host: `127.0.0.1:${port}`, "content-type": "text/plain" }, rpc)).toBe(415);
+    expect(await raw({ ...AUTH, host: "evil.example", "content-type": "application/json" }, rpc)).toBe(403);
+    expect(await raw({ ...AUTH, host: `127.0.0.1:${port}`, origin: "https://evil.example", "content-type": "application/json" }, rpc)).toBe(403);
+    expect(await raw({ ...AUTH, host: `127.0.0.1:${port}`, "content-type": "text/plain" }, rpc)).toBe(415);
     expect(await raw({ host: "evil.example" }, undefined, "/.well-known/agent.json")).toBe(403);
-    expect(await raw({ host: `localhost:${port}`, "content-type": "application/json" }, rpc)).toBe(200);
+    expect(await raw({ ...AUTH, host: `localhost:${port}`, "content-type": "application/json" }, rpc)).toBe(200);
   });
 
+  it("will not start without a token", () => {
+    expect(() => createA2AServer({ data: reader, version: "1.2.3", token: "" })).toThrow(/token/);
+  });
 });

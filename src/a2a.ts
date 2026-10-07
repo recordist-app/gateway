@@ -1,10 +1,12 @@
 /**
  * A2A agent: Agent Card + JSON-RPC 2.0 task endpoint (tasks/send, tasks/get,
  * tasks/cancel, tasks/sendSubscribe over SSE). Dependency-free (node:http).
+ * Every request except the Agent Card must carry `Authorization: Bearer <api_token>`.
  */
 import { randomUUID } from "node:crypto";
 import http from "node:http";
 
+import { bearerAuth, sendUnauthorised } from "./auth.js";
 import { DEFAULT_A2A_PORT } from "./config.js";
 import type { RecordistData } from "./data/types.js";
 import { errorMessage } from "./data/errors.js";
@@ -105,7 +107,7 @@ export function buildAgentCard(opts: { url: string; version: string }): AgentCar
     version: opts.version,
     provider: { organization: "Recordist" },
     capabilities: { streaming: true, pushNotifications: false, stateTransitionHistory: false },
-    authentication: { schemes: [] },
+    authentication: { schemes: ["bearer"] },
     defaultInputModes: ["text", "data"],
     defaultOutputModes: ["text", "data"],
     skills: TOOLS.map((t) => ({
@@ -179,6 +181,8 @@ function outcomeParts(o: TaskOutcome): Part[] {
 export interface A2AServerOptions {
   data: RecordistData;
   version: string;
+  /** Bearer token every request except the Agent Card must present (the app's api_token). */
+  token: string;
   port?: number;
   host?: string;
   /** Origins (scheme://host:port) allowed to call from a browser context; none by default. */
@@ -306,6 +310,7 @@ export function createA2AServer(opts: A2AServerOptions): http.Server {
   const host = opts.host ?? "127.0.0.1";
   const port = opts.port ?? DEFAULT_A2A_PORT;
   const log = opts.log ?? (() => undefined);
+  const authorised = bearerAuth(opts.token);
   const agent = new A2AAgent(opts.data, opts.maxTasks);
   const card = buildAgentCard({ url: `http://${host}:${port}/`, version: opts.version });
 
@@ -333,12 +338,19 @@ export function createA2AServer(opts: A2AServerOptions): http.Server {
         return;
       }
     }
+
+    // The Agent Card stays public so a client can discover the bearer scheme; it lists skills only, no meeting data.
+    const isCard = req.method === "GET" && (url.pathname === "/.well-known/agent.json" || url.pathname === "/.well-known/agent-card.json");
+    if (!isCard && !authorised(req)) {
+      sendUnauthorised(res);
+      return;
+    }
     if (req.method === "POST" && !String(req.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) {
       sendJson(res, 415, { error: { code: "unsupported_media_type", message: "Content-Type must be application/json" } });
       return;
     }
 
-    if (req.method === "GET" && (url.pathname === "/.well-known/agent.json" || url.pathname === "/.well-known/agent-card.json")) {
+    if (isCard) {
       sendJson(res, 200, card);
       return;
     }

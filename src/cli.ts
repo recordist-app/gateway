@@ -89,6 +89,9 @@ Options:
   --a2a-port <n>    A2A port (default ${DEFAULT_A2A_PORT})
   --host <addr>     Bind address for HTTP servers (default 127.0.0.1; keep it loopback)
 
+--http and --a2a answer only requests that carry "Authorization: Bearer <api_token>"
+(the A2A Agent Card excepted); they will not start without a token.
+
 Environment:
   RECORDIST_DATA_DIR    Override the data directory (contains recordist.db and api_token)
   RECORDIST_API_URL     Override the local API base URL (default http://127.0.0.1:47321)
@@ -140,6 +143,11 @@ export async function doctor(config: GatewayConfig = loadConfig()): Promise<{ te
   lines.push(`api token:   ${config.apiToken ? (process.env.RECORDIST_API_TOKEN ? "present [RECORDIST_API_TOKEN]" : `present (${config.tokenPath})${tokenMode}`) : `missing (${config.tokenPath})`}`);
   lines.push(`local api:   ${config.apiUrl} — ${healthLine}`);
   lines.push(`mode:        ${reachable ? "api (full read/write)" : dbExists ? "sqlite fallback (read-only; recording controls unavailable)" : "NO DATA SOURCE"}`);
+  // --http and --a2a check every caller against this same token and refuse to start without one.
+  const tokenSource = process.env.RECORDIST_API_TOKEN?.trim() ? "RECORDIST_API_TOKEN" : config.tokenPath;
+  lines.push(`http / a2a:  ${config.apiToken
+    ? `token required — callers must send "Authorization: Bearer <token>" with the token from ${tokenSource} (the A2A Agent Card stays public)`
+    : "will not start — they require the api token and there is none (stdio needs no token)"}`);
   return { text: lines.join("\n"), ok: reachable || dbExists };
 }
 
@@ -162,6 +170,12 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   }
 
   const config = loadConfig();
+  const token = config.apiToken;
+  if ((opts.http || opts.a2a) && !token) {
+    log(`--http and --a2a need the API token to check every caller, and there is none: ${config.tokenPath} is missing and RECORDIST_API_TOKEN is not set. Open Recordist once, then try again.`);
+    process.exitCode = 1;
+    return;
+  }
   const data = createRecordistData(config);
   const version = packageVersion();
   const closers: Array<() => Promise<void> | void> = [() => data.close()];
@@ -175,19 +189,20 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   if (opts.http) {
     const server = createMcpHttpServer({
       createServer: () => createMcpServer(data, { version }),
+      token: token!,
       port: opts.httpPort,
       host: opts.host,
       log,
     });
     const { port } = await listen(server, opts.httpPort, opts.host);
-    log(`MCP Streamable HTTP listening on http://${opts.host}:${port}/mcp`);
+    log(`MCP Streamable HTTP listening on http://${opts.host}:${port}/mcp (Authorization: Bearer <api_token> required)`);
     closers.push(() => new Promise<void>((r) => server.close(() => r())));
   }
 
   if (opts.a2a) {
-    const server = createA2AServer({ data, version, port: opts.a2aPort, host: opts.host, log });
+    const server = createA2AServer({ data, version, token: token!, port: opts.a2aPort, host: opts.host, log });
     const { port } = await listen(server, opts.a2aPort, opts.host);
-    log(`A2A agent listening on http://${opts.host}:${port}/ (card: /.well-known/agent.json)`);
+    log(`A2A agent listening on http://${opts.host}:${port}/ (card: /.well-known/agent.json; Authorization: Bearer <api_token> required)`);
     closers.push(() => new Promise<void>((r) => server.close(() => r())));
   }
 

@@ -1,7 +1,8 @@
 /**
  * Streamable HTTP transport for the MCP server on 127.0.0.1:47322/mcp.
  * One McpServer + transport per session; sessions are tracked by the
- * `mcp-session-id` header the SDK issues on initialize.
+ * `mcp-session-id` header the SDK issues on initialize. Every request must
+ * carry `Authorization: Bearer <api_token>`.
  */
 import { randomUUID } from "node:crypto";
 import http from "node:http";
@@ -10,10 +11,13 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 
+import { bearerAuth, sendUnauthorised } from "./auth.js";
 import { DEFAULT_MCP_HTTP_PORT } from "./config.js";
 
 export interface McpHttpOptions {
   createServer: () => McpServer;
+  /** Bearer token every request must present (the app's api_token). */
+  token: string;
   port?: number;
   host?: string;
   path?: string;
@@ -49,6 +53,7 @@ export function createMcpHttpServer(opts: McpHttpOptions): http.Server {
   const port = opts.port ?? DEFAULT_MCP_HTTP_PORT;
   const mcpPath = opts.path ?? "/mcp";
   const log = opts.log ?? (() => undefined);
+  const authorised = bearerAuth(opts.token);
   const sessions = new Map<string, { transport: StreamableHTTPServerTransport; server: McpServer }>();
   /** Hosts accepted by the DNS-rebinding check, using the port actually bound (matters when port 0 is used). */
   const allowedHosts = (): string[] => {
@@ -58,7 +63,13 @@ export function createMcpHttpServer(opts: McpHttpOptions): http.Server {
   };
 
   const server: http.Server = http.createServer(async (req, res) => {
-    const url = new URL(req.url ?? "/", `http://${host}:${port}`);
+    if (!authorised(req)) {
+      sendUnauthorised(res);
+      return;
+    }
+    // Outside the try below: an unparsable target (`GET http://[`) would otherwise be an unhandled rejection that ends the process.
+    let url: URL;
+    try { url = new URL(req.url ?? "/", `http://${host}:${port}`); } catch { sendJson(res, 400, { error: { code: "bad_request", message: "Unparsable request path" } }); return; }
     if (url.pathname !== mcpPath) {
       if (url.pathname === "/" || url.pathname === "/health") {
         sendJson(res, 200, { ok: true, name: "recordist-gateway", mcp: mcpPath, sessions: sessions.size });
