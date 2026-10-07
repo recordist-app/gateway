@@ -88,9 +88,10 @@ of `<data>/api_token` (or `RECORDIST_API_TOKEN`), the same token the gateway
 uses for the app's local API. A missing or wrong token gets `401` with
 `WWW-Authenticate: Bearer` and nothing else. The one exception is the A2A Agent
 Card, which stays public so clients can discover the scheme; it lists skills
-only, never meetings. Neither mode starts when no token is available: open
-Recordist once so it writes `api_token`. The stdio transport needs no token,
-since only the assistant that launched it can talk to it. `--doctor` says
+only, never meetings. Neither mode starts when no token is available, and
+neither does `--all`, stdio included: open Recordist once so it writes
+`api_token`, or run with no flags for stdio alone. The stdio transport needs no
+token, since only the assistant that launched it can talk to it. `--doctor` says
 whether `--http` and `--a2a` will require the token or refuse to start.
 
 ## What the assistant gets
@@ -166,7 +167,7 @@ curl -N http://127.0.0.1:47323/ -H "Authorization: Bearer $TOKEN" -H 'content-ty
 recordist-gateway                 MCP over stdio (default)
 recordist-gateway --http          MCP over Streamable HTTP on 127.0.0.1:47322/mcp (bearer token)
 recordist-gateway --a2a           A2A agent on 127.0.0.1:47323 (bearer token)
-recordist-gateway --all           stdio + --http + --a2a
+recordist-gateway --all           stdio + --http + --a2a (exits if there is no token)
 recordist-gateway --doctor        diagnostics: data dir, DB, token, app reachability, HTTP/A2A auth
 recordist-gateway --version
   --http-port <n>  --a2a-port <n>  --host <addr>
@@ -216,7 +217,13 @@ for search when present, with a `LIKE` fallback otherwise.
   add the header to your client (see [Authentication](#authentication)). The
   stdio transport is unchanged.
 - `--http` and `--a2a` refuse to start when no token is available
-  (`<data>/api_token` missing and `RECORDIST_API_TOKEN` unset).
+  (`<data>/api_token` missing and `RECORDIST_API_TOKEN` unset). So does
+  `--all`, and it exits before stdio starts, so an assistant that launches the
+  gateway with `--all` gets nothing. Without a token, launch it with no flags
+  (stdio only).
+- Library: `createMcpHttpServer` and `createA2AServer` now take a required
+  `token` option (the app's api_token) and throw when it is missing or blank.
+  Pass `loadConfig().apiToken`, as in [Library use](#library-use).
 - `--doctor` reports whether `--http` and `--a2a` will require the token or
   refuse to start, and where the token comes from.
 - The MCP HTTP transport answers `400` to an unparsable request path instead of
@@ -238,6 +245,21 @@ import { createRecordistData, createMcpServer } from "@recordist/gateway";
 
 const data = createRecordistData();          // API with SQLite fallback
 const server = createMcpServer(data);        // McpServer — attach any transport
+```
+
+The HTTP and A2A servers require a bearer token and throw without one:
+
+```ts
+import { createMcpHttpServer, createMcpServer, createRecordistData, listen, loadConfig } from "@recordist/gateway";
+
+const config = loadConfig();                 // apiToken: <data>/api_token or RECORDIST_API_TOKEN
+if (!config.apiToken) throw new Error("open Recordist once so it writes api_token");
+const data = createRecordistData(config);
+const http = createMcpHttpServer({
+  createServer: () => createMcpServer(data),
+  token: config.apiToken,                    // callers must send Authorization: Bearer <token>
+});
+await listen(http, 47322);
 ```
 
 ## About

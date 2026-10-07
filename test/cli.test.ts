@@ -41,6 +41,7 @@ describe("doctor", () => {
     expect(d.text).toMatch(/local api: .*unreachable/);
     expect(d.text).toContain("sqlite fallback");
     expect(d.text).toMatch(/http \/ a2a: +will not start — they require the api token/);
+    expect(d.text).toContain("--all exits too, stdio included");
   });
 
   it("says --http and --a2a will require the token, and where it comes from", async () => {
@@ -61,8 +62,16 @@ describe("doctor", () => {
 
       process.env.RECORDIST_API_TOKEN = "e".repeat(64);
       const fromEnv = await doctor(config);
+      expect(fromEnv.text).toContain("api token:   present [RECORDIST_API_TOKEN]");
       expect(fromEnv.text).toMatch(/http \/ a2a: +token required — .*from RECORDIST_API_TOKEN/);
       expect(fromEnv.text).not.toContain("e".repeat(64));
+
+      // A blank variable is ignored by loadConfig, so both lines must name the file.
+      process.env.RECORDIST_API_TOKEN = "   ";
+      const blankEnv = await doctor(config);
+      expect(blankEnv.text).toContain(`api token:   present (${fx.dir}/api_token)`);
+      expect(blankEnv.text).not.toContain("[RECORDIST_API_TOKEN]");
+      expect(blankEnv.text).toContain(`with the token from ${fx.dir}/api_token`);
     } finally {
       if (saved === undefined) delete process.env.RECORDIST_API_TOKEN; else process.env.RECORDIST_API_TOKEN = saved;
     }
@@ -82,10 +91,15 @@ describe("main", () => {
     try {
       for (const flag of ["--http", "--a2a", "--all"]) {
         process.exitCode = undefined;
+        stderr.mockClear();
         await main([flag, "--http-port", "0", "--a2a-port", "0"]);
         expect(process.exitCode).toBe(1);
+        const said = stderr.mock.calls.map((c) => String(c[0])).join("");
+        expect(said).toMatch(/need the API token/);
+        // --all also takes stdio down, so it says so and points at plain stdio.
+        if (flag === "--all") expect(said).toContain("Nothing was started, stdio included; run with no flags for stdio alone");
+        else expect(said).not.toContain("stdio included");
       }
-      expect(stderr.mock.calls.map((c) => String(c[0])).join("")).toMatch(/need the API token/);
     } finally {
       stderr.mockRestore();
       process.exitCode = saved.exitCode;
