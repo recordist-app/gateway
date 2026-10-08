@@ -272,7 +272,7 @@ export const startRecording = defineTool({
   name: "start_recording",
   title: "Start recording",
   description:
-    "Start recording a meeting now via the Recordist app. Requires the app to be running and the 'allow remote start' setting enabled.",
+    "Start recording a meeting now via the Recordist app. Requires the app to be running and 'Allow agents to start recordings' turned on in Settings → Integrations.",
   readOnly: false,
   examples: ["Start recording this meeting", "Record a meeting called 'Design sync'"],
   inputShape: {

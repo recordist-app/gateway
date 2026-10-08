@@ -1,22 +1,22 @@
 {
   "identifier": "recordist-app-gateway",
   "name": "Recordist",
-  "version": "0.1.5",
-  "description": "Read your Recordist meeting recordings, transcripts, notes and action items from your own computer. Nothing leaves the machine.",
+  "version": "0.1.6",
+  "description": "Read and search the meetings Recordist recorded on your own Mac, with their transcripts, notes and action items, and start or stop a recording. The gateway talks only to the Recordist app on 127.0.0.1 and listens on loopback by default. What it returns goes to the AI assistant you connect, which may send it to its own cloud model.",
   "category": "productivity",
   "homepage": "https://recordist.app",
   "icon": "https://raw.githubusercontent.com/recordist-app/gateway/main/media/logo-400.png",
-  "tags": ["meetings", "transcripts", "notes", "local", "privacy"],
+  "tags": ["meetings", "transcripts", "notes", "local"],
   "artifacts": { "npm": { "packageName": "@recordist/gateway" } },
   "tools": [
     { "name": "list_meetings", "description": "List recorded meetings, newest first." },
     { "name": "get_meeting", "description": "Get one meeting with its notes and action items." },
     { "name": "get_transcript", "description": "Read a meeting's transcript." },
     { "name": "search_meetings", "description": "Full-text search across transcripts and notes." },
-    { "name": "get_action_items", "description": "List open action items across meetings." },
-    { "name": "start_recording", "description": "Start a recording (the app still asks the person to confirm)." },
+    { "name": "get_action_items", "description": "List action items across meetings, optionally only the open ones." },
+    { "name": "start_recording", "description": "Start a recording. Works only when Allow agents to start recordings is on in Recordist's Settings → Integrations; it is off by default." },
     { "name": "stop_recording", "description": "Stop the current recording." },
     { "name": "add_marker", "description": "Add a marker at the current moment of a recording." },
-    { "name": "regenerate_notes", "description": "Regenerate a meeting's notes with a template." }
+    { "name": "regenerate_notes", "description": "Regenerate a meeting's notes with a template, using the AI provider set in Recordist, which may be a cloud service." }
   ]
 }

@@ -3,18 +3,24 @@
 [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/recordist-app/gateway) [![Glama score](https://glama.ai/mcp/servers/recordist-app/gateway/badges/score.svg)](https://glama.ai/mcp/servers/recordist-app/gateway)
 
 MCP server + A2A agent for **Recordist**, the meeting notetaker that runs on your
-own computer with no bot in the call and no upload. It lets Claude Desktop, Claude
-Code, Cursor and other agents read and act on the meetings recorded on your machine.
+own computer with no bot in the call. It lets Claude Desktop, Claude Code, Cursor
+and other agents read and act on the meetings recorded on your machine.
 
 Recordist itself is opening in small waves: ask for a place at
-**https://recordist.app/early-access** (Mac today; Windows and Linux in early access).
+**https://recordist.app/early-access** (Mac with Apple silicon for now).
 
 - **Reads** (list, get, transcript, search, action items) work whether or not the
   Recordist app is running: the gateway talks to the app's local API when it is
   up and falls back to opening `recordist.db` read-only when it is not.
-- **Actions** (start/stop recording, add marker, regenerate notes) need the app.
-  When it is not running they fail with `Recordist app is not running`.
-- Everything is loopback-only. Nothing leaves your machine.
+- **Actions** (start and stop recording, add a marker, regenerate notes) need the
+  app. When it is not running they fail with `Recordist app is not running`.
+  `start_recording` also needs **Allow agents to start recordings** in Recordist's
+  Settings → Integrations, which is off by default.
+- **Where your meetings go.** The gateway itself talks only to the Recordist app on
+  `127.0.0.1` and listens on loopback by default. What it returns goes to the AI
+  assistant you connect, which may send it to its own cloud model.
+  `regenerate_notes` has the app write notes with the provider set in Recordist's
+  Settings → AI notes, which may also be a cloud service.
 
 ## Install
 
@@ -48,7 +54,7 @@ Windows: `%APPDATA%\Claude\`):
 claude mcp add recordist -- npx -y @recordist/gateway
 ```
 
-or, for the HTTP transport while `recordist-gateway --http` is running (it needs
+or, for the HTTP transport while `npx -y @recordist/gateway --http` is running (it needs
 the app's API token, see [Authentication](#authentication)):
 
 ```bash
@@ -75,7 +81,7 @@ claude mcp add --transport http recordist http://127.0.0.1:47322/mcp \
 ### Any Streamable HTTP client
 
 ```bash
-recordist-gateway --http          # http://127.0.0.1:47322/mcp
+npx -y @recordist/gateway --http          # http://127.0.0.1:47322/mcp
 ```
 
 Send `Authorization: Bearer <api_token>` with every request.
@@ -105,10 +111,10 @@ whether `--http` and `--a2a` will require the token or refuse to start.
 | `get_transcript` | Transcript as `json` \| `md` \| `srt` \| `vtt` \| `txt` |
 | `search_meetings` | Full-text search across transcripts and notes (FTS5) |
 | `get_action_items` | Action items, filter by `meeting_id` / `open_only` |
-| `regenerate_notes` | Re-run AI notes (`summary`, `action_items`, `decisions`, …) — needs the app |
-| `start_recording` | Start recording — needs the app + "allow remote start" setting |
-| `stop_recording` | Stop the current recording — needs the app |
-| `add_marker` | Bookmark the current moment — needs the app |
+| `regenerate_notes` | Re-run AI notes (`summary`, `action_items`, `decisions`, …) with the provider set in Recordist; needs the app |
+| `start_recording` | Start recording; needs the app and **Allow agents to start recordings** (Settings → Integrations, off by default) |
+| `stop_recording` | Stop the current recording; needs the app |
+| `add_marker` | Bookmark the current moment; needs the app |
 
 **Resources**: `recordist://meeting/{id}` (JSON) and
 `recordist://meeting/{id}/transcript` (Markdown). The resource list shows the
@@ -119,7 +125,7 @@ whether `--http` and `--a2a` will require the token or refuse to start.
 ## A2A agent
 
 ```bash
-recordist-gateway --a2a           # http://127.0.0.1:47323/
+npx -y @recordist/gateway --a2a           # http://127.0.0.1:47323/
 ```
 
 Agent Card at `http://127.0.0.1:47323/.well-known/agent.json` (public, no
@@ -164,14 +170,22 @@ curl -N http://127.0.0.1:47323/ -H "Authorization: Bearer $TOKEN" -H 'content-ty
 ## CLI
 
 ```
-recordist-gateway                 MCP over stdio (default)
-recordist-gateway --http          MCP over Streamable HTTP on 127.0.0.1:47322/mcp (bearer token)
-recordist-gateway --a2a           A2A agent on 127.0.0.1:47323 (bearer token)
-recordist-gateway --all           stdio + --http + --a2a (exits if there is no token)
-recordist-gateway --doctor        diagnostics: data dir, DB, token, app reachability, HTTP/A2A auth
-recordist-gateway --version
+npx -y @recordist/gateway                 MCP over stdio (default)
+npx -y @recordist/gateway --http          MCP over Streamable HTTP on 127.0.0.1:47322/mcp (bearer token)
+npx -y @recordist/gateway --a2a           A2A agent on 127.0.0.1:47323 (bearer token)
+npx -y @recordist/gateway --all           stdio + --http + --a2a (exits if there is no token)
+npx -y @recordist/gateway --doctor        diagnostics: data dir, DB, token, app reachability, HTTP/A2A auth
+npx -y @recordist/gateway --version
   --http-port <n>  --a2a-port <n>  --host <addr>
 ```
+
+Always run it with npx by its scoped name, `@recordist/gateway`. A global
+install (`npm i -g @recordist/gateway`) puts the same command on your path as
+`recordist-gateway`.
+
+`--host` binds `--http` and `--a2a` to another address and exists for
+containers. Do not expose it on a network interface: the token would cross the
+network in plain HTTP.
 
 Logs go to stderr; stdout is reserved for the stdio MCP transport.
 
@@ -193,11 +207,14 @@ for search when present, with a `LIKE` fallback otherwise.
 
 ## Security notes
 
-- The gateway only ever binds `127.0.0.1` (`--host` exists for containers; do
-  not expose it on a network interface). The Streamable HTTP transport enables
-  DNS-rebinding protection and only accepts `Host: 127.0.0.1` / `localhost`.
-  The A2A agent accepts only its own Host, no browser Origin unless allow-listed,
-  and JSON-RPC POSTs only as `application/json`.
+- The gateway binds `127.0.0.1` by default. `--host` exists for containers; do
+  not expose it on a network interface. The Streamable HTTP transport enables
+  DNS-rebinding protection and only accepts its own Host (`127.0.0.1` or
+  `localhost` by default). The A2A agent accepts only its own Host, no browser
+  Origin unless allow-listed, and JSON-RPC POSTs only as `application/json`.
+- The gateway itself talks only to the Recordist app on `127.0.0.1`. What it
+  returns goes to the AI assistant you connect, which may send it to its own
+  cloud model, so connect only an assistant you trust with your meetings.
 - `--http` and `--a2a` require `Authorization: Bearer <api_token>` on every
   request (the A2A Agent Card excepted), compared in constant time, so other
   user accounts on the machine cannot read meetings through them. Programs
@@ -207,7 +224,30 @@ for search when present, with a `LIKE` fallback otherwise.
   mode `0600`. `--doctor` warns if the file is group/world readable. Never commit
   or share it; anyone with the token can control recording on your machine.
 - The SQLite database is opened read-only; the gateway never modifies it.
-- No telemetry, no outbound network calls.
+- No telemetry. The gateway makes no network calls other than to the Recordist
+  app's local API.
+
+## Changes in 0.1.6
+
+- The README and the package and plugin descriptions now say where meeting text
+  goes. The gateway itself talks only to the Recordist app on `127.0.0.1` and
+  listens on loopback by default. What it returns goes to the AI assistant you
+  connect, which may send it to its own cloud model. Earlier versions said that
+  nothing leaves your machine. That is true of the gateway alone, and a cloud
+  assistant sends what it reads to its provider.
+- The README says the gateway binds `127.0.0.1` by default and that `--host`
+  is for containers, where it used to say the gateway only ever binds
+  `127.0.0.1`.
+- The Recordist app is described as available for Macs with Apple silicon,
+  which is the only build published.
+- `start_recording` names the setting as the app shows it: **Allow agents to
+  start recordings**, in Settings → Integrations.
+- Every command in the README and in `--help` uses the scoped name,
+  `npx -y @recordist/gateway`.
+- Source comments point to the public
+  [local API reference](https://recordist.app/developers/local-api).
+- Tools, transports and token checks are unchanged, so a 0.1.5 setup works as
+  it is.
 
 ## Changes in 0.1.5
 
@@ -244,7 +284,7 @@ node dist/cli.js --doctor
 import { createRecordistData, createMcpServer } from "@recordist/gateway";
 
 const data = createRecordistData();          // API with SQLite fallback
-const server = createMcpServer(data);        // McpServer — attach any transport
+const server = createMcpServer(data);        // McpServer; attach any transport
 ```
 
 The HTTP and A2A servers require a bearer token and throw without one:

@@ -1,7 +1,7 @@
 /**
  * Resolves where Recordist keeps its data and how to reach the local API.
  *
- * Per CONTRACTS.md §1:
+ * The app's data folder:
  *   macOS   ~/Library/Application Support/app.recordist.desktop/
  *   Windows %APPDATA%\app.recordist.desktop\
  *   Linux   ~/.local/share/app.recordist.desktop/

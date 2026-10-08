@@ -1,18 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "app.recordist/gateway",
-  "description": "Search and read meetings recorded by Recordist on your own computer. Loopback only.",
+  "description": "Read, search and act on meetings Recordist recorded on your Mac. Listens on loopback by default.",
   "repository": {
     "url": "https://github.com/recordist-app/gateway",
     "source": "github"
   },
   "websiteUrl": "https://recordist.app/developers/mcp",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@recordist/gateway",
-      "version": "0.1.5",
+      "version": "0.1.6",
       "transport": {
         "type": "stdio"
       },

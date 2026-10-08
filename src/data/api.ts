@@ -1,5 +1,5 @@
 /**
- * Client for the desktop app's local REST API (CONTRACTS.md §3).
+ * Client for the desktop app's local REST API (https://recordist.app/developers/local-api).
  * Loopback only, bearer-token authenticated.
  */
 import type {

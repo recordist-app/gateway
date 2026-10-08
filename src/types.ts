@@ -1,8 +1,9 @@
 /**
  * Shared domain types for the Recordist gateway.
  *
- * These mirror the JSON shapes in docs/product/CONTRACTS.md §3 (Meeting JSON,
- * Transcript JSON) and the SQLite schema in §2.
+ * These mirror the Meeting JSON and Transcript JSON shapes of the app's local
+ * API (https://recordist.app/developers/local-api) and the tables the app keeps
+ * in recordist.db.
  */
 
 export type SourceApp =

@@ -1,5 +1,5 @@
 /**
- * Builds a temporary recordist.db with the exact CONTRACTS.md §2 schema and a
+ * Builds a temporary recordist.db with the same tables as the app's schema and a
  * small, deterministic fixture set.
  */
 import Database from "better-sqlite3";

@@ -1,5 +1,5 @@
 /**
- * Read-only access to `<data>/recordist.db` using the schema in CONTRACTS.md §2.
+ * Read-only access to `<data>/recordist.db`, using the tables the Recordist app creates.
  *
  * Uses the FTS5 table `segments_fts` for full-text search and falls back to a
  * `LIKE` scan when the FTS table is not present (e.g. an older DB or a build

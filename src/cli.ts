@@ -74,20 +74,24 @@ export function parseArgs(argv: string[]): CliOptions {
   return o;
 }
 
-export const HELP = `recordist-gateway v${packageVersion()} — MCP server + A2A agent for Recordist
+export const HELP = `@recordist/gateway v${packageVersion()}: MCP server + A2A agent for Recordist
 
 Usage:
-  recordist-gateway                 MCP over stdio (default)
-  recordist-gateway --http          MCP over Streamable HTTP  http://127.0.0.1:${DEFAULT_MCP_HTTP_PORT}/mcp
-  recordist-gateway --a2a           A2A agent                 http://127.0.0.1:${DEFAULT_A2A_PORT}/
-  recordist-gateway --all           stdio + --http + --a2a
-  recordist-gateway --doctor        Print diagnostics and exit
-  recordist-gateway --version
+  npx -y @recordist/gateway                 MCP over stdio (default)
+  npx -y @recordist/gateway --http          MCP over Streamable HTTP  http://127.0.0.1:${DEFAULT_MCP_HTTP_PORT}/mcp
+  npx -y @recordist/gateway --a2a           A2A agent                 http://127.0.0.1:${DEFAULT_A2A_PORT}/
+  npx -y @recordist/gateway --all           stdio + --http + --a2a
+  npx -y @recordist/gateway --doctor        Print diagnostics and exit
+  npx -y @recordist/gateway --version
+
+With npx, always use the scoped name @recordist/gateway. After
+npm i -g @recordist/gateway the same command is recordist-gateway.
 
 Options:
   --http-port <n>   Streamable HTTP port (default ${DEFAULT_MCP_HTTP_PORT})
   --a2a-port <n>    A2A port (default ${DEFAULT_A2A_PORT})
-  --host <addr>     Bind address for HTTP servers (default 127.0.0.1; keep it loopback)
+  --host <addr>     Bind address for --http and --a2a (default 127.0.0.1). It exists
+                    for containers; do not expose it on a network interface.
 
 --http and --a2a answer only requests that carry "Authorization: Bearer <api_token>"
 (the A2A Agent Card excepted); they will not start without a token, and neither
