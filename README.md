@@ -228,6 +228,13 @@ for search when present, with a `LIKE` fallback otherwise.
 - No telemetry. The gateway makes no network calls other than to the Recordist
   app's local API.
 
+## Changes in 0.1.7
+
+- Security: dependency updates for advisories in @modelcontextprotocol/sdk and
+  transitive packages. The SDK floor is now 1.31.0, the first version with the
+  fix for GHSA-6qxp-vccf-f47h. Tools, transports and token checks are
+  unchanged, so a 0.1.6 setup works as it is.
+
 ## Changes in 0.1.6
 
 - The README and the package and plugin descriptions now say where meeting text

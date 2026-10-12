@@ -1,7 +1,7 @@
 {
   "identifier": "recordist-app-gateway",
   "name": "Recordist",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Read and search the meetings Recordist recorded on your own Mac, with their transcripts, notes and action items, and start or stop a recording. The gateway talks only to the Recordist app on 127.0.0.1 and listens on loopback by default. What it returns goes to the AI assistant you connect, which may send it to its own cloud model.",
   "category": "productivity",
   "homepage": "https://recordist.app",

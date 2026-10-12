@@ -1,6 +1,6 @@
 {
   "name": "recordist",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Read, search and act on the meetings Recordist recorded on this Mac. The gateway talks only to the Recordist app on 127.0.0.1.",
   "mcpServers": {
     "recordist": {
