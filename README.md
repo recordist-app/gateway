@@ -7,8 +7,8 @@ writes notes from your calls on your own computer, with no bot in the call. It l
 Claude Desktop, Claude Code, Cursor and other agents read and act on the meetings
 recorded on your machine.
 
-Recordist itself is opening in small waves: ask for a place at
-**https://recordist.app/early-access** (Mac with Apple silicon for now).
+Recordist is free to download for Mac, with Windows and Linux as a preview:
+**https://recordist.app/download**. Recording, transcription and search are free.
 
 - **Reads** (list, get, transcript, search, action items) work whether or not the
   Recordist app is running: the gateway talks to the app's local API when it is
