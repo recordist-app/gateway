@@ -255,8 +255,9 @@ for search when present, with a `LIKE` fallback otherwise.
 
 ## Privacy
 
-The gateway and the extension talk only to the Recordist app on your laptop, on
-`127.0.0.1`. They send nothing to Recordist and have no telemetry. What a tool
+The gateway and the extension talk to the Recordist app on your laptop, on
+`127.0.0.1`, and to nothing else. They send nothing to Recordist and have no
+telemetry. What a tool
 returns goes to the assistant that called it, which may send it to its own
 cloud model under its provider's terms.
 Recordist's privacy policy: https://recordist.app/privacy

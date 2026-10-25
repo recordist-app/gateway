@@ -11,8 +11,8 @@ Recordist keeps the record of the user's calls on their laptop: transcripts with
 2. **Read before answering.** `get_meeting` gives the notes and action items. `get_transcript` with `format` set to `md` gives the words. Read the transcript whenever the user asks what someone said or agreed to.
 3. **Quote.** For each point, give the speaker, the time in the call, and their words in quotation marks. When the record does not cover something, say so plainly. Never fill a gap with a guess.
 4. **Action items.** `get_action_items` with `open_only` lists what is still open. Keep each owner as the record has it.
-5. **Follow-up email.** Build it only from the notes, the action items and quoted lines. Give each commitment with its owner and date as they were said. Leave it as a draft for the user to send.
+5. **Follow-up email.** Build it from the notes, the action items and quoted lines, and from nothing else. Give each commitment with its owner and date as they were said. Leave it as a draft for the user to send.
 
-`start_recording`, `stop_recording` and `add_marker` act on the user's laptop. Use them only when the user asks for it in this conversation. `start_recording` works only after the user turns on Allow agents to start recordings in Recordist's Settings, Integrations; if it is refused, tell them where the setting is and leave the choice to them. When a recording starts, remind the user that the people on the call may need to be told.
+`start_recording`, `stop_recording` and `add_marker` act on the user's laptop. Use them when the user asks for it in this conversation, and not otherwise. `start_recording` works once the user turns on Allow agents to start recordings in Recordist's Settings, Integrations; if it is refused, tell them where the setting is and leave the choice to them. When a recording starts, remind the user that the people on the call may need to be told.
 
 If the Recordist tools are not available here, explain that they run on the laptop where Recordist is installed, in Claude Code or in a Cowork session on that laptop, and that Recordist needs to have been opened there once.

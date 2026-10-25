@@ -18,8 +18,8 @@ In Claude Code:
 The plugin starts the open-source Recordist gateway, `@recordist/gateway`
 version 0.1.7 from npm, with `npx`. Its source is in this repository,
 https://github.com/recordist-app/gateway. The gateway is an MCP server that
-talks only to the Recordist app on the same laptop, at `127.0.0.1`, with the
-token the app keeps in its own data folder. When Recordist is closed, it reads
+talks to the Recordist app on the same laptop, at `127.0.0.1`, and to nothing
+else, with the token the app keeps in its own data folder. When Recordist is closed, it reads
 the app's database read-only.
 
 It runs in Claude Code, and in Cowork sessions on the laptop where Recordist is
@@ -40,8 +40,8 @@ the speaker, the time and the words for each point.
 The tools that read: `list_meetings`, `get_meeting`, `get_transcript`,
 `search_meetings` and `get_action_items`. The tools that act, with Recordist
 open: `regenerate_notes`, `start_recording`, `stop_recording` and `add_marker`.
-`start_recording` works only after you turn on Allow agents to start recordings
-in Recordist's Settings, Integrations. It is off until you do.
+`start_recording` works once you turn on Allow agents to start recordings in
+Recordist's Settings, Integrations. It is off until you do.
 
 ## Data
 
