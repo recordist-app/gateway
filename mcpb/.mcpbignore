@@ -1,0 +1,5 @@
+# Left out of the bundle: type declarations and source maps inside the compiled code and dependencies.
+*.d.ts
+*.d.mts
+*.d.cts
+*.map

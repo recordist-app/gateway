@@ -44,6 +44,8 @@ export class AutoData implements RecordistData {
   private readonly api: ApiClient | null;
   private readonly openSqlite: () => SqliteReader | null;
   private sqlite: SqliteReader | null | undefined;
+  /** Why the database could not be opened, when it exists but no SQLite driver could read it. */
+  private sqliteError: string | null = null;
   private readonly probeTtlMs: number;
   private readonly now: () => number;
   private lastProbeAt = -Infinity;
@@ -86,8 +88,9 @@ export class AutoData implements RecordistData {
     if (this.sqlite === undefined) {
       try {
         this.sqlite = this.openSqlite();
-      } catch {
+      } catch (err) {
         this.sqlite = null;
+        this.sqliteError = err instanceof Error ? err.message : String(err);
       }
     }
     return this.sqlite;
@@ -97,6 +100,11 @@ export class AutoData implements RecordistData {
     if (await this.probe()) return this.api!;
     const db = this.getSqlite();
     if (db) return db;
+    if (this.sqliteError) {
+      throw new NoDataSourceError(
+        `${this.api ? "the app is not running and " : ""}recordist.db ${this.sqliteError}`,
+      );
+    }
     throw new NoDataSourceError(
       this.api ? "the app is not running and recordist.db was not found" : "recordist.db was not found",
     );
@@ -141,6 +149,7 @@ export class AutoData implements RecordistData {
   close(): void {
     this.sqlite?.close();
     this.sqlite = undefined;
+    this.sqliteError = null;
   }
 }
 

@@ -6,12 +6,20 @@ import { createFixtureDb, IDS, NOW, type FixtureDb } from "./helpers/db.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 
-describe.each([{ fts: true }, { fts: false }])("SqliteReader (fts=$fts)", ({ fts }) => {
+const CASES = (["better-sqlite3", "node:sqlite"] as const).flatMap((driver) =>
+  [true, false].map((fts) => ({ driver, fts })),
+);
+
+describe.each(CASES)("SqliteReader (driver=$driver, fts=$fts)", ({ driver, fts }) => {
   let fx: FixtureDb;
   let r: SqliteReader;
   beforeAll(() => {
     fx = createFixtureDb({ fts });
-    r = new SqliteReader({ dbPath: fx.dbPath });
+    r = new SqliteReader({ dbPath: fx.dbPath, driver });
+  });
+
+  it("opens the database with the driver asked for", () => {
+    expect(r.driver).toBe(driver);
   });
   afterAll(() => {
     r.close();

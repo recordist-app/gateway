@@ -5,7 +5,6 @@
  * `LIKE` scan when the FTS table is not present (e.g. an older DB or a build
  * of SQLite without FTS5).
  */
-import Database from "better-sqlite3";
 import { existsSync } from "node:fs";
 
 import type {
@@ -21,6 +20,7 @@ import type {
   Segment,
   Transcript,
 } from "../types.js";
+import { openReadOnly, type ReadOnlyDb, type SqliteDriver } from "./driver.js";
 import { AppNotRunningError } from "./errors.js";
 import type { RecordistData } from "./types.js";
 
@@ -102,17 +102,19 @@ export function rowToSummary(r: Row): MeetingSummary {
 export interface SqliteReaderOptions {
   /** Path to recordist.db. Must exist. */
   dbPath: string;
+  /** Use only this SQLite driver (tests); by default better-sqlite3, then node:sqlite. */
+  driver?: SqliteDriver;
 }
 
 export class SqliteReader implements RecordistData {
   readonly mode = "sqlite" as const;
   readonly dbPath: string;
-  private readonly db: Database.Database;
+  private readonly db: ReadOnlyDb;
   private readonly hasFts: boolean;
 
   constructor(opts: SqliteReaderOptions) {
     this.dbPath = opts.dbPath;
-    this.db = new Database(opts.dbPath, { readonly: true, fileMustExist: true });
+    this.db = openReadOnly(opts.dbPath, opts.driver);
     this.hasFts = this.detectFts();
   }
 
@@ -122,6 +124,11 @@ export class SqliteReader implements RecordistData {
 
   get ftsAvailable(): boolean {
     return this.hasFts;
+  }
+
+  /** The SQLite driver that opened the database. */
+  get driver(): SqliteDriver {
+    return this.db.driver;
   }
 
   private detectFts(): boolean {

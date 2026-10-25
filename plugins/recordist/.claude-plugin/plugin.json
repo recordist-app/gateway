@@ -1,0 +1,11 @@
+{
+  "name": "recordist",
+  "displayName": "Recordist",
+  "version": "0.1.7",
+  "description": "Ask Claude about your calls. It reads the notes, transcripts and action items Recordist keeps on your laptop, quotes who said what and when, and drafts the follow-up. The record stays with you.",
+  "author": { "name": "Recordist", "email": "hello@recordist.app", "url": "https://recordist.app" },
+  "homepage": "https://recordist.app/developers",
+  "repository": "https://github.com/recordist-app/gateway",
+  "license": "MIT",
+  "keywords": ["meetings", "calls", "transcripts", "notes", "action items", "follow-up", "local"]
+}
