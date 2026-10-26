@@ -33,7 +33,15 @@ Requires Node 20+. `better-sqlite3` ships prebuilt binaries for common platforms
 
 ## Connect an assistant
 
-### Claude Desktop
+### Claude Desktop: the extension
+
+The Recordist extension installs in Claude Desktop in one step and needs no
+configuration. Double-click `recordist-<version>.mcpb` (build it as in
+[Claude Desktop Extension](#claude-desktop-extension)), or in Claude Desktop
+open Settings → Extensions → Advanced settings → Install Extension… and choose
+the file. Claude shows what the extension can do before you install it.
+
+### Claude Desktop: by hand
 
 `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/`,
 Windows: `%APPDATA%\Claude\`):
@@ -63,6 +71,20 @@ TOKEN="$(cat ~/Library/Application\ Support/app.recordist.desktop/api_token)"
 claude mcp add --transport http recordist http://127.0.0.1:47322/mcp \
   --header "Authorization: Bearer $TOKEN"
 ```
+
+### Claude Code plugin
+
+This repository is also a Claude Code plugin marketplace. The plugin in
+[`plugins/recordist`](plugins/recordist) starts this gateway, pinned to a
+published version, and adds a skill for answering from the record:
+
+```
+/plugin install recordist --marketplace recordist-app/gateway
+```
+
+On Claude Code before 2.1.275, add the marketplace first:
+`/plugin marketplace add recordist-app/gateway`, then
+`/plugin install recordist@recordist`.
 
 ### Cursor
 
@@ -202,8 +224,11 @@ Logs go to stderr; stdout is reserved for the stdio MCP transport.
 
 On each call the gateway probes `GET /v1/health` (800 ms timeout, result cached
 for 5 s). If the app answers, the call goes to the API. Otherwise reads open
-`<data>/recordist.db` with `readonly: true` (the app's WAL is never written to)
-and actions return `Recordist app is not running`. FTS5 (`segments_fts`) is used
+`<data>/recordist.db` read-only (the app's WAL is never written to)
+and actions return `Recordist app is not running`. The database is opened with
+`better-sqlite3` when its native binary matches the Node that runs the gateway,
+and with `node:sqlite` (Node 22.13 and later) when it does not. If neither can
+open it, the error says why for each. FTS5 (`segments_fts`) is used
 for search when present, with a `LIKE` fallback otherwise.
 
 ## Security notes
@@ -227,6 +252,44 @@ for search when present, with a `LIKE` fallback otherwise.
 - The SQLite database is opened read-only; the gateway never modifies it.
 - No telemetry. The gateway makes no network calls other than to the Recordist
   app's local API.
+
+## Privacy
+
+The gateway and the extension talk to the Recordist app on your laptop, on
+`127.0.0.1`, and to nothing else. They send nothing to Recordist and have no
+telemetry. What a tool
+returns goes to the assistant that called it, which may send it to its own
+cloud model under its provider's terms.
+Recordist's privacy policy: https://recordist.app/privacy
+
+## Claude Desktop Extension
+
+`mcpb/manifest.json` describes the extension in the
+[MCP Bundle](https://github.com/modelcontextprotocol/mcpb) format. Build it with:
+
+```bash
+npm ci
+bash scripts/build-mcpb.sh      # build/recordist-<version>.mcpb
+```
+
+The script compiles the gateway, installs the production dependencies at their
+locked versions, leaves out `better-sqlite3` so the bundle carries no native
+code, then validates and packs it with the official `@anthropic-ai/mcpb` CLI.
+Claude Desktop runs the extension with the Node it ships, so reads with
+Recordist closed use `node:sqlite`.
+
+## Changes in 0.1.8
+
+- The Claude Desktop Extension: `mcpb/manifest.json`, `mcpb/icon.png` and
+  `scripts/build-mcpb.sh`, which builds `recordist-<version>.mcpb`.
+- A Claude Code plugin in `plugins/recordist`, listed by the marketplace in
+  `.claude-plugin/marketplace.json`.
+- Reads with the app closed fall back to `node:sqlite` when `better-sqlite3`
+  cannot load, for example under a Node it was not built for. When neither can
+  open `recordist.db`, the error names the reason for each instead of saying
+  the file was not found.
+- Tools, transports and token checks are unchanged, so a 0.1.7 setup works as
+  it is.
 
 ## Changes in 0.1.7
 

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/modelcontextprotocol/mcpb/main/schemas/mcpb-manifest-v0.3.schema.json",
+  "manifest_version": "0.3",
+  "name": "recordist",
+  "display_name": "Recordist",
+  "version": "0.1.8",
+  "description": "Ask Claude about your calls. It reads the notes, transcripts and action items Recordist keeps on your laptop, and the record stays with you.",
+  "long_description": "Recordist writes notes from your calls on your laptop, with no bot in the call. This extension lets Claude read that record: search every call, open a meeting's notes and transcript, list the action items, and draft the follow-up from what was said.\n\n**The record stays with you.** The extension talks to the Recordist app on your laptop, at 127.0.0.1, and to nothing else. It sends nothing to Recordist. Claude reads what it needs to answer you, and handles it as it handles anything you type.\n\n**What you need.** Recordist on your laptop, opened at least once: https://recordist.app/download. Reading and searching work while Recordist is closed. Writing new notes, adding a marker and starting or stopping a recording need it open. New notes use the provider you chose in Recordist's Settings, AI notes. Claude can start a recording once you turn on Allow agents to start recordings in Recordist's Settings, Integrations; it is off until you do.\n\n**Try asking:**\n- What did I agree to in yesterday's calls?\n- Draft the follow-up to my call with Dana, from what we said.\n- When did we last talk about the renewal, and who raised it?",
+  "author": {
+    "name": "Recordist",
+    "email": "hello@recordist.app",
+    "url": "https://recordist.app"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/recordist-app/gateway"
+  },
+  "homepage": "https://recordist.app/developers",
+  "documentation": "https://recordist.app/developers/mcp",
+  "support": "https://recordist.app/support",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/cli.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/cli.js"],
+      "env": {}
+    }
+  },
+  "tools": [
+    { "name": "list_meetings", "description": "List your recorded meetings, newest first, with an optional search and date range." },
+    { "name": "get_meeting", "description": "Open one meeting with its notes, action items and markers." },
+    { "name": "get_transcript", "description": "Read a meeting's transcript with speakers and times." },
+    { "name": "search_meetings", "description": "Search every transcript and note, and find the moment something was said." },
+    { "name": "get_action_items", "description": "List the action items from your meetings, or just the open ones." },
+    { "name": "regenerate_notes", "description": "Ask Recordist to write a meeting's notes again with the provider set in Recordist. Needs Recordist open." },
+    { "name": "start_recording", "description": "Start a recording. Needs Recordist open and Allow agents to start recordings turned on in its Settings, Integrations; it is off until you turn it on." },
+    { "name": "stop_recording", "description": "Stop the current recording. Needs Recordist open." },
+    { "name": "add_marker", "description": "Mark the current moment of a recording, with an optional label. Needs Recordist open." }
+  ],
+  "tools_generated": false,
+  "keywords": ["meetings", "calls", "transcripts", "notes", "action items", "follow-up", "local", "recordist"],
+  "license": "MIT",
+  "privacy_policies": ["https://recordist.app/privacy"],
+  "compatibility": {
+    "platforms": ["darwin", "win32"],
+    "runtimes": {
+      "node": ">=20.0.0"
+    }
+  }
+}
