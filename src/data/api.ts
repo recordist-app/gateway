@@ -10,6 +10,9 @@ import type {
   MarkerResult,
   Meeting,
   MeetingSummary,
+  PromptResult,
+  ProposalState,
+  ProposeActionOptions,
   RecordingResult,
   RegenerateNotesOptions,
   RegenerateResult,
@@ -18,7 +21,7 @@ import type {
   Transcript,
 } from "../types.js";
 import { API_HEALTH_TIMEOUT_MS } from "../config.js";
-import { ApiError } from "./errors.js";
+import { ApiError, RecordistError } from "./errors.js";
 import type { RecordistData } from "./types.js";
 
 export type FetchLike = typeof fetch;
@@ -31,7 +34,17 @@ export interface ApiClientOptions {
   /** Default request timeout in ms (health uses `healthTimeoutMs`). */
   timeoutMs?: number;
   healthTimeoutMs?: number;
+  /** How long a stop waits for its answer (STOP_TIMEOUT_MS). */
+  stopTimeoutMs?: number;
 }
+
+/**
+ * The app answers a stop only once the last of the transcript is written, which on a busy laptop can take far longer
+ * than an ordinary request. The recording itself ends at once.
+ */
+export const STOP_TIMEOUT_MS = 30_000;
+/** A second look at the app after a stop got no answer: longer than the probe, as the app is busy writing up. */
+const LOOK_AGAIN_TIMEOUT_MS = 5_000;
 
 function normaliseMeeting(raw: Record<string, unknown>): Meeting {
   const summary = normaliseSummary(raw);
@@ -74,6 +87,7 @@ export class ApiClient implements RecordistData {
   private readonly fetchImpl: FetchLike;
   private readonly timeoutMs: number;
   private readonly healthTimeoutMs: number;
+  private readonly stopTimeoutMs: number;
 
   constructor(opts: ApiClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, "");
@@ -81,6 +95,7 @@ export class ApiClient implements RecordistData {
     this.fetchImpl = opts.fetch ?? globalThis.fetch;
     this.timeoutMs = opts.timeoutMs ?? 15_000;
     this.healthTimeoutMs = opts.healthTimeoutMs ?? API_HEALTH_TIMEOUT_MS;
+    this.stopTimeoutMs = opts.stopTimeoutMs ?? STOP_TIMEOUT_MS;
   }
 
   get hasToken(): boolean {
@@ -134,9 +149,9 @@ export class ApiClient implements RecordistData {
     }
   }
 
-  /** Health probe with a short timeout. Throws on any failure. */
-  async health(): Promise<Health> {
-    const h = await this.request<Health>("GET", "/v1/health", { timeoutMs: this.healthTimeoutMs });
+  /** Health probe with a short timeout (or `timeoutMs`). Throws on any failure. */
+  async health(timeoutMs?: number): Promise<Health> {
+    const h = await this.request<Health>("GET", "/v1/health", { timeoutMs: timeoutMs ?? this.healthTimeoutMs });
     // Without an accepted bearer token the app answers only { ok, version }: reachable, not usable.
     return {
       ok: Boolean(h.ok),
@@ -146,10 +161,10 @@ export class ApiClient implements RecordistData {
     };
   }
 
-  /** `true` when the app answers `/v1/health` within the health timeout. */
-  async isReachable(): Promise<boolean> {
+  /** `true` when the app answers `/v1/health` within the health timeout (or `timeoutMs`). */
+  async isReachable(timeoutMs?: number): Promise<boolean> {
     try {
-      const h = await this.health();
+      const h = await this.health(timeoutMs);
       return h.ok;
     } catch {
       return false;
@@ -255,6 +270,21 @@ export class ApiClient implements RecordistData {
     return { ok: true, ...res } as RegenerateResult;
   }
 
+  async proposeAction(opts: ProposeActionOptions): Promise<ProposalState> {
+    const res = await this.request<ProposalState>("POST", "/v1/actions", { body: { ...opts.action, reason: opts.reason, via: opts.via } });
+    return { id: String(res.id), status: res.status, expires_at: res.expires_at };
+  }
+
+  async proposalStatus(id: string): Promise<ProposalState | null> {
+    try {
+      const res = await this.request<ProposalState>("GET", `/v1/actions/${encodeURIComponent(id)}`);
+      return { id: String(res.id), status: res.status, decided_at: res.decided_at ?? null };
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  }
+
   async startRecording(opts: StartRecordingOptions = {}): Promise<RecordingResult> {
     const res = await this.request<Record<string, unknown>>("POST", "/v1/recording/start", {
       body: { source_app: opts.source_app ?? "manual", title: opts.title },
@@ -262,9 +292,37 @@ export class ApiClient implements RecordistData {
     return { ok: true, ...res } as RecordingResult;
   }
 
+  async promptRecording(opts: StartRecordingOptions = {}): Promise<PromptResult> {
+    const res = await this.request<{ prompt_id?: unknown; reason?: unknown }>("POST", "/v1/recording/prompt", {
+      body: { source_app: opts.source_app ?? "manual", ...(opts.title ? { title: opts.title } : {}) },
+    });
+    const prompt_id = typeof res.prompt_id === "string" && res.prompt_id ? res.prompt_id : null;
+    return prompt_id === null && typeof res.reason === "string" && res.reason ? { prompt_id, reason: res.reason } : { prompt_id };
+  }
+
+  /**
+   * Stops the recording. A stop that gets no answer in time is not reported as a failure straight away: the app is
+   * asked again, and if nothing records any more (it is writing up), the stop worked.
+   */
   async stopRecording(): Promise<RecordingResult> {
-    const res = await this.request<Record<string, unknown>>("POST", "/v1/recording/stop", { body: {} });
-    return { ok: true, ...res } as RecordingResult;
+    try {
+      const res = await this.request<Record<string, unknown>>("POST", "/v1/recording/stop", { body: {}, timeoutMs: this.stopTimeoutMs });
+      return { ok: true, ...res } as RecordingResult;
+    } catch (err) {
+      if (err instanceof ApiError) throw err;
+      let now: { recording?: { active?: boolean; meeting_id?: unknown } } | null = null;
+      try {
+        now = await this.request("GET", "/v1/health", { timeoutMs: LOOK_AGAIN_TIMEOUT_MS });
+      } catch {
+        now = null;
+      }
+      const rec = now?.recording;
+      if (rec && rec.active !== true) {
+        return { ok: true, ...(typeof rec.meeting_id === "string" ? { meeting_id: rec.meeting_id } : {}), still_writing: true };
+      }
+      if (rec?.active === true) throw new RecordistError("not_stopped", "Recordist did not stop the recording. Stop it in Recordist.");
+      throw new RecordistError("no_answer", "Recordist did not answer in time. Check the Recordist app, then try again.");
+    }
   }
 
   async addMarker(label?: string): Promise<MarkerResult> {

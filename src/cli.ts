@@ -115,7 +115,7 @@ export async function doctor(config: GatewayConfig = loadConfig()): Promise<{ te
   if (tokenExists) {
     try {
       const mode = statSync(config.tokenPath).mode & 0o777;
-      tokenMode = ` (mode ${mode.toString(8)}${mode & 0o077 ? " — consider chmod 600" : ""})`;
+      tokenMode = ` (mode ${mode.toString(8)}${mode & 0o077 ? "; consider chmod 600" : ""})`;
     } catch { /* ignore */ }
   }
   const api = new ApiClient({ baseUrl: config.apiUrl, token: config.apiToken });
@@ -125,20 +125,20 @@ export async function doctor(config: GatewayConfig = loadConfig()): Promise<{ te
     const h = await api.health();
     reachable = h.ok && h.authenticated;
     healthLine = h.authenticated
-      ? `ok — app v${h.version}, recording ${h.recording.active ? `active (${h.recording.meeting_id ?? "?"})` : "idle"}`
-      : `app v${h.version} answers, but the token was not accepted — ${config.apiToken ? `it changed (Remove everything issues a new one): copy ${config.tokenPath} again or set RECORDIST_API_TOKEN` : `no token: pair from Recordist → Settings → Integrations (8-digit code) or copy ${config.tokenPath}`}`;
+      ? `ok: app v${h.version}, recording ${h.recording.active ? `active (${h.recording.meeting_id ?? "?"})` : "idle"}`
+      : `app v${h.version} answers, but the token was not accepted: ${config.apiToken ? `it changed (Remove everything issues a new one): copy ${config.tokenPath} again or set RECORDIST_API_TOKEN` : `no token: pair from Recordist → Settings → Integrations (8-digit code) or copy ${config.tokenPath}`}`;
   } catch (err) {
-    healthLine = `unreachable — ${err instanceof Error ? err.message : String(err)}`;
+    healthLine = `unreachable: ${err instanceof Error ? err.message : String(err)}`;
   }
   let dbLine = dbExists ? "found" : "missing";
   if (dbExists) {
     try {
       const r = new SqliteReader({ dbPath: config.dbPath });
       const n = (await r.listMeetings({ limit: 1 })).length;
-      dbLine = `found — readable, FTS5 ${r.ftsAvailable ? "available" : "NOT available (LIKE fallback)"}, ${n ? "has meetings" : "no meetings yet"}`;
+      dbLine = `found, readable, FTS5 ${r.ftsAvailable ? "available" : "NOT available (LIKE fallback)"}, ${n ? "has meetings" : "no meetings yet"}`;
       r.close();
     } catch (err) {
-      dbLine = `found — but failed to open: ${err instanceof Error ? err.message : String(err)}`;
+      dbLine = `found, but failed to open: ${err instanceof Error ? err.message : String(err)}`;
     }
   }
 
@@ -148,14 +148,14 @@ export async function doctor(config: GatewayConfig = loadConfig()): Promise<{ te
 
   lines.push(`recordist-gateway v${packageVersion()}  (node ${process.version}, ${process.platform})`);
   lines.push(`data dir:    ${config.dataDir}${process.env.RECORDIST_DATA_DIR ? "  [RECORDIST_DATA_DIR]" : ""}`);
-  lines.push(`database:    ${config.dbPath} — ${dbLine}`);
+  lines.push(`database:    ${config.dbPath}: ${dbLine}`);
   lines.push(`api token:   ${config.apiToken ? (tokenFromEnv ? "present [RECORDIST_API_TOKEN]" : `present (${config.tokenPath})${tokenMode}`) : `missing (${config.tokenPath})`}`);
-  lines.push(`local api:   ${config.apiUrl} — ${healthLine}`);
+  lines.push(`local api:   ${config.apiUrl}: ${healthLine}`);
   lines.push(`mode:        ${reachable ? "api (full read/write)" : dbExists ? "sqlite fallback (read-only; recording controls unavailable)" : "NO DATA SOURCE"}`);
   // --http and --a2a check every caller against this same token and refuse to start without one.
   lines.push(`http / a2a:  ${config.apiToken
-    ? `token required — callers must send "Authorization: Bearer <token>" with the token from ${tokenSource} (the A2A Agent Card stays public)`
-    : "will not start — they require the api token and there is none; --all exits too, stdio included, so run with no flags for stdio, which needs no token"}`);
+    ? `token required: callers must send "Authorization: Bearer <token>" with the token from ${tokenSource} (the A2A Agent Card stays public)`
+    : "will not start: they require the api token and there is none; --all exits too, stdio included, so run with no flags for stdio, which needs no token"}`);
   return { text: lines.join("\n"), ok: reachable || dbExists };
 }
 
@@ -191,7 +191,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   const reachable = await data.probe(true);
   log(`data dir ${config.dataDir}; app ${reachable ? "reachable" : "not reachable"} → ${data.mode} mode`);
   if (!reachable && !SqliteReader.exists(config.dbPath)) {
-    log(`warning: ${config.dbPath} not found and app not running — reads will fail until either is available`);
+    log(`warning: ${config.dbPath} not found and the app is not running; reads will fail until either is available`);
   }
 
   if (opts.http) {

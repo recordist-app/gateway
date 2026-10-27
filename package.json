@@ -1,7 +1,7 @@
 {
   "name": "@recordist/gateway",
   "version": "0.1.8",
-  "description": "MCP server + A2A agent for the Recordist app (https://recordist.app): lets AI assistants read, search and act on meetings recorded on your own computer.",
+  "description": "MCP server + A2A agent for the Recordist app (https://recordist.app): lets AI assistants read, search and act on meetings recorded on your own laptop.",
   "license": "MIT",
   "type": "module",
   "bin": {

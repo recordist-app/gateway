@@ -46,6 +46,30 @@ describe("AutoData", () => {
     d.close();
   });
 
+  it("gives a busy app longer to answer before an action is refused as 'not running'", async () => {
+    // Health answers in 400 ms: too slow for the 100 ms probe that picks a reader, in time for an action.
+    const calls: string[] = [];
+    const slow = vi.fn(async (input: URL | string | Request, init?: RequestInit) => {
+      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      calls.push(url.pathname);
+      if (url.pathname === "/v1/health") {
+        await new Promise<void>((resolve, reject) => {
+          const t = setTimeout(resolve, 400);
+          init?.signal?.addEventListener("abort", () => { clearTimeout(t); reject(new Error("aborted")); });
+        });
+        return Response.json({ ok: true, version: "9", recording: { active: true } });
+      }
+      if (url.pathname === "/v1/recording/marker") return Response.json({ marker: { id: "k", at_ms: 1, label: "x" } });
+      return Response.json({ error: { code: "not_found", message: "?" } }, { status: 404 });
+    }) as unknown as typeof fetch;
+    const api = new ApiClient({ baseUrl: "http://127.0.0.1:47321", token: "t", fetch: slow, healthTimeoutMs: 100 });
+    const d = new AutoData({ api, openSqlite: () => null });
+    expect(await d.probe()).toBe(false);
+    expect((await d.addMarker("x")).ok).toBe(true);
+    expect(d.mode).toBe("api");
+    expect(calls.filter((p) => p === "/v1/recording/marker")).toHaveLength(1);
+  });
+
   it("re-probes after the TTL", async () => {
     let now = 0;
     const calls: string[] = [];

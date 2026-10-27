@@ -60,6 +60,7 @@ export function createMcpServer(data: RecordistData, opts: McpServerOptions = {}
       instructions:
         "Recordist is a local-first meeting recorder. Use list_meetings / search_meetings to find meetings, get_meeting for notes and action items, get_transcript for the full text. " +
         "Recording controls (start_recording, stop_recording, add_marker) and regenerate_notes need the Recordist desktop app to be running; reads also work offline from the local database. " +
+        "start_recording starts at once only when the person allowed agents to; otherwise Recordist asks them on its own card. Stop a recording only when the person asks. " +
         `Meetings are also exposed as resources: ${MEETING_URI_TEMPLATE} and ${TRANSCRIPT_URI_TEMPLATE}.`,
     },
   );
@@ -74,7 +75,7 @@ export function createMcpServer(data: RecordistData, opts: McpServerOptions = {}
         inputSchema: tool.inputShape,
         annotations: {
           readOnlyHint: tool.readOnly,
-          destructiveHint: false,
+          destructiveHint: tool.destructive === true,
           idempotentHint: tool.readOnly,
           openWorldHint: false,
         },
@@ -218,7 +219,7 @@ export function createMcpServer(data: RecordistData, opts: McpServerOptions = {}
         }
         const open = full.action_items.filter((a) => !a.done);
         sections.push(
-          `### ${full.title} — ${formatDate(full.started_at)} (\`${full.id}\`)\n\n${body}` +
+          `### ${full.title}, ${formatDate(full.started_at)} (\`${full.id}\`)\n\n${body}` +
             (open.length ? `\n\nOpen action items:\n${open.map(renderActionItem).join("\n")}` : ""),
         );
       }

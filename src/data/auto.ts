@@ -17,6 +17,9 @@ import type {
   MarkerResult,
   Meeting,
   MeetingSummary,
+  PromptResult,
+  ProposalState,
+  ProposeActionOptions,
   RecordingResult,
   RegenerateNotesOptions,
   RegenerateResult,
@@ -29,6 +32,12 @@ import { ApiClient } from "./api.js";
 import { AppNotRunningError, NoDataSourceError } from "./errors.js";
 import { SqliteReader } from "./sqlite.js";
 import type { DataMode, RecordistData } from "./types.js";
+
+/**
+ * Before an action is refused as "not running", the app is given this long to answer: a closed app refuses at once,
+ * but a busy one (short of memory, writing up a recording) can take longer than the quick probe that picks a reader.
+ */
+export const ACTION_PROBE_TIMEOUT_MS = 3_000;
 
 export interface AutoDataOptions {
   api: ApiClient | null;
@@ -112,6 +121,11 @@ export class AutoData implements RecordistData {
 
   private async actor(action: string): Promise<RecordistData> {
     if (await this.probe()) return this.api!;
+    if (this.api && (await this.api.isReachable(ACTION_PROBE_TIMEOUT_MS))) {
+      this.apiReachable = true;
+      this.lastProbeAt = this.now();
+      return this.api;
+    }
     throw new AppNotRunningError(action);
   }
 
@@ -139,11 +153,20 @@ export class AutoData implements RecordistData {
   async startRecording(opts?: StartRecordingOptions): Promise<RecordingResult> {
     return (await this.actor("start recording")).startRecording(opts);
   }
+  async promptRecording(opts?: StartRecordingOptions): Promise<PromptResult> {
+    return (await this.actor("show the record card")).promptRecording(opts);
+  }
   async stopRecording(): Promise<RecordingResult> {
     return (await this.actor("stop recording")).stopRecording();
   }
   async addMarker(label?: string): Promise<MarkerResult> {
     return (await this.actor("add a marker")).addMarker(label);
+  }
+  async proposeAction(opts: ProposeActionOptions): Promise<ProposalState> {
+    return (await this.actor("suggest an action")).proposeAction(opts);
+  }
+  async proposalStatus(id: string): Promise<ProposalState | null> {
+    return (await this.actor("ask about a suggestion")).proposalStatus(id);
   }
 
   close(): void {

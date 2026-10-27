@@ -31,13 +31,19 @@ describe("MCP server (in-memory transport, SQLite backend)", () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([...TOOL_NAMES].sort());
     expect(tools.map((t) => t.name).sort()).toEqual([
-      "add_marker", "get_action_items", "get_meeting", "get_transcript", "list_meetings",
-      "regenerate_notes", "search_meetings", "start_recording", "stop_recording",
+      "action_status", "add_marker", "get_action_items", "get_meeting", "get_transcript", "list_meetings",
+      "propose_action", "regenerate_notes", "search_meetings", "start_recording", "stop_recording",
     ]);
+    // Recordist Agent: suggesting writes nothing by itself, but it is an action the person then approves, so it is not read-only.
+    expect(tools.find((t) => t.name === "propose_action")!.annotations?.readOnlyHint).toBe(false);
+    expect(tools.find((t) => t.name === "action_status")!.annotations?.readOnlyHint).toBe(true);
     const getT = tools.find((t) => t.name === "get_transcript")!;
     expect(getT.annotations?.readOnlyHint).toBe(true);
     expect((getT.inputSchema as { properties: Record<string, unknown> }).properties).toHaveProperty("format");
     expect(tools.find((t) => t.name === "start_recording")!.annotations?.readOnlyHint).toBe(false);
+    // Ending a recording, or replacing the current notes, is destructive: hosts ask each time instead of running it unasked.
+    const destructive = tools.filter((t) => t.annotations?.destructiveHint === true).map((t) => t.name).sort();
+    expect(destructive).toEqual(["regenerate_notes", "stop_recording"]);
   });
 
   it("list_meetings returns text + structuredContent", async () => {

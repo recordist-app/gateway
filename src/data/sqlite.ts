@@ -394,11 +394,20 @@ export class SqliteReader implements RecordistData {
   async startRecording(): Promise<never> {
     throw new AppNotRunningError("start recording");
   }
+  async promptRecording(): Promise<never> {
+    throw new AppNotRunningError("show the record card");
+  }
   async stopRecording(): Promise<never> {
     throw new AppNotRunningError("stop recording");
   }
   async addMarker(): Promise<never> {
     throw new AppNotRunningError("add a marker");
+  }
+  async proposeAction(): Promise<never> {
+    throw new AppNotRunningError("suggest an action");
+  }
+  async proposalStatus(): Promise<never> {
+    throw new AppNotRunningError("ask about a suggestion");
   }
 
   close(): void {

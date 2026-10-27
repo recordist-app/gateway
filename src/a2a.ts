@@ -102,7 +102,7 @@ export function buildAgentCard(opts: { url: string; version: string }): AgentCar
   return {
     name: "Recordist",
     description:
-      "Local-first meeting companion. Lists, searches and reads meetings, transcripts, notes and action items recorded on this machine, and can control recording when the Recordist desktop app is running.",
+      "Local-first meeting companion. Lists, searches and reads meetings, transcripts, notes and action items recorded on this laptop, and can control recording when the Recordist app is running. Recording starts only as the person allows: otherwise Recordist asks them on its own card.",
     url: opts.url,
     version: opts.version,
     provider: { organization: "Recordist" },

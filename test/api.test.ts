@@ -75,6 +75,7 @@ describe("ApiClient", () => {
     const { fetchImpl, calls } = mockFetch((url, init) => {
       if (url.pathname === "/v1/recording/start") return { body: { meeting_id: "new1" } };
       if (url.pathname === "/v1/recording/stop") return { body: { meeting_id: "new1" } };
+      if (url.pathname === "/v1/recording/prompt") return { body: { prompt_id: "card1", recording: { active: false } } };
       if (url.pathname === "/v1/recording/marker") {
         expect(JSON.parse(String(init.body))).toEqual({ label: "pricing" });
         return { body: { marker: { id: "mk", at_ms: 10, label: "pricing" } } };
@@ -86,8 +87,54 @@ describe("ApiClient", () => {
     expect(await c.startRecording({ title: "X" })).toEqual({ ok: true, meeting_id: "new1" });
     expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ source_app: "manual", title: "X" });
     expect(await c.stopRecording()).toEqual({ ok: true, meeting_id: "new1" });
+    expect(await c.promptRecording({ title: "X" })).toEqual({ prompt_id: "card1" });
+    expect(JSON.parse(String(calls.find((k) => k.url.endsWith("/v1/recording/prompt"))!.init.body))).toEqual({ source_app: "manual", title: "X" });
     expect((await c.addMarker("pricing")).marker).toMatchObject({ label: "pricing" });
     expect((await c.regenerateNotes({ meeting_id: "m1", kind: "summary" })).note).toMatchObject({ id: "n2" });
+  });
+
+  it("reads why the app showed no card (Recordist 1.0.5), and an app that gives no reason as before", async () => {
+    let reply: Record<string, unknown> = { prompt_id: null, reason: "recording" };
+    const { fetchImpl } = mockFetch(() => ({ body: reply }));
+    const c = new ApiClient({ baseUrl: "http://127.0.0.1:47321", token: "t", fetch: fetchImpl });
+    expect(await c.promptRecording()).toEqual({ prompt_id: null, reason: "recording" });
+    reply = { prompt_id: null };
+    expect(await c.promptRecording()).toEqual({ prompt_id: null });
+    reply = { prompt_id: "card2", reason: null };
+    expect(await c.promptRecording()).toEqual({ prompt_id: "card2" });
+  });
+
+  it("calls a stop that outlasted the wait done when the app says nothing records (it is writing up)", async () => {
+    let health: unknown = { ok: true, version: "1.0.4", recording: { active: false, finishing: true, meeting_id: "m9" } };
+    const hang = vi.fn((input: string | URL | Request, init?: RequestInit) => {
+      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      if (url.pathname === "/v1/health") return Promise.resolve(new Response(JSON.stringify(health), { status: 200 }));
+      return new Promise<Response>((_, reject) => init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError"))));
+    }) as unknown as typeof fetch;
+    const c = new ApiClient({ baseUrl: "http://127.0.0.1:47321", token: "t", fetch: hang, stopTimeoutMs: 20 });
+    expect(await c.stopRecording()).toEqual({ ok: true, meeting_id: "m9", still_writing: true });
+    health = { ok: true, version: "1.0.4", recording: { active: true, meeting_id: "m9" } };
+    await expect(c.stopRecording()).rejects.toThrow("Recordist did not stop the recording.");
+    health = { ok: true, version: "1.0.4" };
+    await expect(c.stopRecording()).rejects.toThrow("Recordist did not answer in time.");
+  });
+
+  it("suggests an action and learns only its status", async () => {
+    const { fetchImpl, calls } = mockFetch((url, init) => {
+      if (url.pathname === "/v1/actions" && init.method === "POST") {
+        expect(JSON.parse(String(init.body))).toEqual({ kind: "mark_promise_done", action_item_id: "a1", reason: "Done in the call.", via: "Claude Desktop" });
+        return { status: 201, body: { id: "g1", status: "proposed", expires_at: 1_700_000_000_000 } };
+      }
+      if (url.pathname === "/v1/actions/g1") return { body: { id: "g1", status: "declined", decided_at: 1_700_000_001_000 } };
+      if (url.pathname === "/v1/actions/gone") return { status: 404, body: { error: { code: 404, message: "not found" } } };
+      if (url.pathname === "/v1/actions") return { status: 403, body: { error: { code: 403, message: "Suggested actions are off. Turn them on under Settings → Integrations → Recordist Agent, and every suggestion will wait for your Approve in Recordist." } } };
+      return { status: 500 };
+    });
+    const c = new ApiClient({ baseUrl: "http://127.0.0.1:47321", token: "t", fetch: fetchImpl });
+    expect(await c.proposeAction({ action: { kind: "mark_promise_done", action_item_id: "a1" }, reason: "Done in the call.", via: "Claude Desktop" })).toEqual({ id: "g1", status: "proposed", expires_at: 1_700_000_000_000 });
+    expect(calls[0]!.init.method).toBe("POST");
+    expect(await c.proposalStatus("g1")).toEqual({ id: "g1", status: "declined", decided_at: 1_700_000_001_000 });
+    expect(await c.proposalStatus("gone")).toBeNull();
   });
 
   it("health respects the timeout and isReachable never throws", async () => {

@@ -3,20 +3,27 @@
 [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/recordist-app/gateway) [![Glama score](https://glama.ai/mcp/servers/recordist-app/gateway/badges/score.svg)](https://glama.ai/mcp/servers/recordist-app/gateway)
 
 MCP server + A2A agent for **Recordist** (https://recordist.app), the app that
-writes notes from your calls on your own computer, with no bot in the call. It lets
+writes notes from your calls on your own laptop, with no bot in the call. It lets
 Claude Desktop, Claude Code, Cursor and other agents read and act on the meetings
-recorded on your machine.
+recorded on your laptop.
 
-Recordist is free to download for Mac, with Windows and Linux as a preview:
-**https://recordist.app/download**. Recording, transcription and search are free.
+Get the free Recordist app for Mac, with Windows and Linux in preview:
+**https://recordist.app/download?from=npm**
 
 - **Reads** (list, get, transcript, search, action items) work whether or not the
   Recordist app is running: the gateway talks to the app's local API when it is
   up and falls back to opening `recordist.db` read-only when it is not.
 - **Actions** (start and stop recording, add a marker, regenerate notes) need the
   app. When it is not running they fail with `Recordist app is not running`.
-  `start_recording` also needs **Allow agents to start recordings** in Recordist's
-  Settings → Integrations, which is off by default.
+- **Recording asks first.** `start_recording` starts at once only when
+  **Allow agents to start recordings** is on in Recordist's Settings, then
+  Integrations (off by default). Otherwise Recordist shows its own record card on
+  the laptop, as it does for the Chrome extension and Stream Deck, and nothing
+  records until the person answers it. Recordist 1.0.4 and earlier show that card
+  only while the Chrome extension switch is on in Settings, then Detection; with
+  both off, the agent is told the recording did not start and the person can
+  start it in Recordist. `stop_recording` and `regenerate_notes`
+  are marked destructive, so assistants that honour MCP's hints ask each time.
 - **Where your meetings go.** The gateway itself talks only to the Recordist app on
   `127.0.0.1` and listens on loopback by default. What it returns goes to the AI
   assistant you connect, which may send it to its own cloud model.
@@ -134,10 +141,12 @@ whether `--http` and `--a2a` will require the token or refuse to start.
 | `get_transcript` | Transcript as `json` \| `md` \| `srt` \| `vtt` \| `txt` |
 | `search_meetings` | Full-text search across transcripts and notes (FTS5) |
 | `get_action_items` | Action items, filter by `meeting_id` / `open_only` |
-| `regenerate_notes` | Re-run AI notes (`summary`, `action_items`, `decisions`, …) with the provider set in Recordist; needs the app |
-| `start_recording` | Start recording; needs the app and **Allow agents to start recordings** (Settings → Integrations, off by default) |
-| `stop_recording` | Stop the current recording; needs the app |
+| `regenerate_notes` | Write the AI notes again (`summary`, `action_items`, `decisions`, …) with the provider set in Recordist; they replace the current notes, which Recordist keeps under Earlier notes (destructive); needs the app |
+| `start_recording` | Record: starts at once with **Allow agents to start recordings** on (Settings → Integrations, off by default), otherwise shows Recordist's record card for the person to answer; needs the app |
+| `stop_recording` | Stop the recording under way (destructive: hosts ask first); needs the app |
 | `add_marker` | Bookmark the current moment; needs the app |
+| `propose_action` | Recordist Agent: suggest an action on the record (draft the follow-up, mark a promise done, export a meeting). Nothing runs: the app shows a card that says exactly what will happen and waits for the person's Approve or Not now; needs the app and **Let connected assistants suggest actions** in Settings → Integrations → Recordist Agent |
+| `action_status` | What became of a suggestion: `proposed`, `done`, `failed`, `declined` or `expired`, and nothing more; needs the app |
 
 **Resources**: `recordist://meeting/{id}` (JSON) and
 `recordist://meeting/{id}/transcript` (Markdown). The resource list shows the
@@ -248,7 +257,7 @@ for search when present, with a `LIKE` fallback otherwise.
   separate them from you.
 - The API token is read from `<data>/api_token`, which the app writes with
   mode `0600`. `--doctor` warns if the file is group/world readable. Never commit
-  or share it; anyone with the token can control recording on your machine.
+  or share it; anyone with the token can control recording on your laptop.
 - The SQLite database is opened read-only; the gateway never modifies it.
 - No telemetry. The gateway makes no network calls other than to the Recordist
   app's local API.
@@ -288,8 +297,19 @@ Recordist closed use `node:sqlite`.
   cannot load, for example under a Node it was not built for. When neither can
   open `recordist.db`, the error names the reason for each instead of saying
   the file was not found.
-- Tools, transports and token checks are unchanged, so a 0.1.7 setup works as
-  it is.
+- A 0.1.7 setup works as it is: the transports, the token checks and the tool
+  names are unchanged.
+- `start_recording` no longer just fails while **Allow agents to start
+  recordings** is off (the default): it asks Recordist to show its own record
+  card, and says that nothing records until the person answers it. "Record this
+  call" now works with the safe default.
+- `stop_recording` and `regenerate_notes` carry `destructiveHint`, so hosts ask
+  before ending a recording or replacing the notes.
+- `stop_recording` waits 30 seconds for the app (it answers once the last of
+  the transcript is written) and, if no answer comes, asks the app again: a
+  recording that has ended is reported as stopped, not as an error.
+- Plain error words, and the README points to the download page instead of the
+  early-access waiting list, which has closed.
 
 ## Changes in 0.1.7
 
@@ -376,7 +396,7 @@ await listen(http, 47322);
 ## About
 
 The gateway is the small, open bridge between your AI assistant and the copy of
-[Recordist](https://recordist.app) running on your own computer. It contains no
+[Recordist](https://recordist.app) running on your own laptop. It contains no
 app code and no keys; it can only reach the local API on the machine it runs on.
 Issues and questions: support@recordist.app. Security reports: security@recordist.app
 (see SECURITY.md). Made by Recordist, a small independent studio in Ontario, Canada.

@@ -6,6 +6,9 @@ import type {
   MarkerResult,
   Meeting,
   MeetingSummary,
+  ProposalState,
+  PromptResult,
+  ProposeActionOptions,
   RecordingResult,
   RegenerateNotesOptions,
   RegenerateResult,
@@ -40,8 +43,13 @@ export interface RecordistData {
   // ---- actions (require the running app) -----------------------------------
   regenerateNotes(opts: RegenerateNotesOptions): Promise<RegenerateResult>;
   startRecording(opts?: StartRecordingOptions): Promise<RecordingResult>;
+  /** Ask Recordist to show its record card; nothing records until the person answers it there. */
+  promptRecording(opts?: StartRecordingOptions): Promise<PromptResult>;
   stopRecording(): Promise<RecordingResult>;
   addMarker(label?: string): Promise<MarkerResult>;
+  /** Recordist Agent: suggest an action for the person to approve in the app, and ask what became of it. */
+  proposeAction(opts: ProposeActionOptions): Promise<ProposalState>;
+  proposalStatus(id: string): Promise<ProposalState | null>;
 
   close(): Promise<void> | void;
 }

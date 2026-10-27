@@ -172,6 +172,16 @@ export interface RecordingResult {
   [key: string]: unknown;
 }
 
+/** `POST /v1/recording/prompt`: the record card's id, or null when Recordist showed none. */
+export interface PromptResult {
+  prompt_id: string | null;
+  /**
+   * Why no card was shown, from Recordist 1.0.5 on: "recording", "starting", "finishing", "snoozed", "cooldown",
+   * "series_skipped" or "auto_recording". An earlier app leaves it out.
+   */
+  reason?: string;
+}
+
 export interface MarkerResult {
   ok: boolean;
   marker?: Marker;
@@ -183,4 +193,32 @@ export interface RegenerateResult {
   ok: boolean;
   note?: Note;
   [key: string]: unknown;
+}
+
+/**
+ * Recordist Agent: an action the assistant suggests. The app shows it as a card that says exactly what will happen; the
+ * person presses Approve or Not now. Nothing runs on the suggestion itself.
+ */
+export type ExportFormat = "md" | "txt" | "srt" | "vtt" | "json";
+export type ProposedAction =
+  | { kind: "draft_followup"; meeting_id: string; template_id?: string }
+  | { kind: "mark_promise_done"; action_item_id: string }
+  | { kind: "export_meeting"; meeting_id: string; format?: ExportFormat };
+
+export interface ProposeActionOptions {
+  action: ProposedAction;
+  /** Why, in the assistant's words; shown on the card as such (at most 300 characters). */
+  reason?: string;
+  /** The assistant behind the gateway, shown on the card ("Claude Desktop"). */
+  via?: string;
+}
+
+export type ProposalStatus = "proposed" | "running" | "done" | "failed" | "declined" | "expired";
+
+/** What the app tells the gateway about a suggestion: its status and the times. Never the card's words or the result. */
+export interface ProposalState {
+  id: string;
+  status: ProposalStatus;
+  expires_at?: number;
+  decided_at?: number | null;
 }

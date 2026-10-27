@@ -5,9 +5,9 @@
 import { z } from "zod";
 
 import type { RecordistData } from "./data/types.js";
-import { NotFoundError } from "./data/errors.js";
+import { ApiError, NotFoundError } from "./data/errors.js";
 import { formatDate, formatDuration, formatTranscript, msToClock } from "./format.js";
-import type { ActionItem, Meeting, MeetingSummary, SearchHit, TranscriptFormat } from "./types.js";
+import type { ActionItem, ExportFormat, Meeting, MeetingSummary, ProposedAction, SearchHit, TranscriptFormat } from "./types.js";
 import { TRANSCRIPT_FORMATS } from "./types.js";
 
 export interface ToolResult {
@@ -24,6 +24,11 @@ export interface ToolDef<Shape extends z.ZodRawShape = any> {
   description: string;
   inputShape: Shape;
   readOnly: boolean;
+  /**
+   * Ends or replaces something the person has (a recording under way, the current notes): hosts are told
+   * (destructiveHint) so they ask each time rather than run it unasked.
+   */
+  destructive?: boolean;
   /** Natural-language examples surfaced in the A2A agent card. */
   examples: string[];
   run(data: RecordistData, args: z.infer<z.ZodObject<Shape>>): Promise<ToolResult>;
@@ -53,7 +58,7 @@ const whenSchema = z
 
 export function renderMeetingLine(m: MeetingSummary): string {
   const parts = [
-    `- **${m.title}** — \`${m.id}\``,
+    `- **${m.title}** (\`${m.id}\`)`,
     `  ${formatDate(m.started_at)} · ${formatDuration(m.duration_ms)} · ${m.source_app ?? "unknown"} · ${m.status}`,
   ];
   if (m.attendees.length) parts.push(`  with ${m.attendees.map((a) => a.name).join(", ")}`);
@@ -110,7 +115,7 @@ function renderHit(h: SearchHit): string {
   const where = h.kind === "segment"
     ? `${h.start_ms != null ? msToClock(h.start_ms) : "?"}${h.speaker ? ` ${h.speaker}` : ""}`
     : `note:${h.note_kind ?? "?"}`;
-  return `- **${h.meeting_title}** (\`${h.meeting_id}\`, ${formatDate(h.started_at)}) — ${where}\n  ${h.snippet.replace(/\s+/g, " ").trim()}`;
+  return `- **${h.meeting_title}** (\`${h.meeting_id}\`, ${formatDate(h.started_at)}), at ${where}\n  ${h.snippet.replace(/\s+/g, " ").trim()}`;
 }
 
 async function requireMeeting(data: RecordistData, id: string): Promise<Meeting> {
@@ -251,8 +256,9 @@ export const regenerateNotes = defineTool({
   name: "regenerate_notes",
   title: "Regenerate notes",
   description:
-    "Ask the Recordist app to (re)generate AI notes for a meeting. `kind` is summary, action_items, decisions, questions, followup_email or custom; `template_id` selects a template. Requires the app to be running.",
+    "Ask the Recordist app to write a meeting's AI notes again. They replace the current notes and open action items (Recordist keeps the earlier ones under Earlier notes; the person's own notes stay). `kind` is summary, action_items, decisions, questions, followup_email or custom; `template_id` selects a template. Requires the app to be running.",
   readOnly: false,
+  destructive: true,
   examples: ["Regenerate the summary for meeting 01J8…", "Redo the action items for my last meeting"],
   inputShape: {
     meeting_id: z.string().min(1),
@@ -268,11 +274,35 @@ export const regenerateNotes = defineTool({
   },
 });
 
+/**
+ * Why Recordist showed no record card, by the reason it gives (Recordist 1.0.5 and later), as the sentence the agent
+ * passes on. A reason not listed here, or none (an earlier app), gets NO_CARD_UNKNOWN.
+ */
+const NO_CARD: Readonly<Record<string, string>> = {
+  recording: "Recordist did not show its record card because a recording is already running.",
+  starting: "Recordist did not show its record card because a recording is already starting.",
+  finishing: "Recordist did not show its record card because it is still writing up the last recording. The person can record again once that is done.",
+  auto_recording: "Recordist is starting the recording without its card, because the person set it to record this app without asking.",
+  snoozed: "Recordist did not show its record card because the person paused its questions for now. The person can start the recording in Recordist.",
+  cooldown: "Recordist did not show its record card because the person declined it a moment ago. The person can start the recording in Recordist.",
+  series_skipped: "Recordist did not show its record card because the person asked not to be asked about this meeting series. The person can start the recording in Recordist.",
+};
+const NO_CARD_UNKNOWN =
+  "Recordist did not show its record card: a recording may already be running, or the card was declined a moment ago, or asking is paused. The person can start the recording in Recordist.";
+/** Added to the start's own refusal when Recordist refuses the card too. */
+const CARD_REFUSED_TOO = "Recordist did not show its record card either, so nothing records. The person can start the recording in Recordist.";
+
+function sentence(text: string): string {
+  const t = text.trim();
+  return /[.!?]$/.test(t) ? t : `${t}.`;
+}
+
 export const startRecording = defineTool({
   name: "start_recording",
   title: "Start recording",
   description:
-    "Start recording a meeting now via the Recordist app. Requires the app to be running and 'Allow agents to start recordings' turned on in Settings → Integrations.",
+    "Record a meeting via the Recordist app. If the person turned on 'Allow agents to start recordings' in Recordist (Settings, Integrations), the recording starts at once. " +
+    "Otherwise, the safe default, Recordist shows its own record card on the person's laptop and nothing records until they answer it; the result says which happened. Requires the app to be running.",
   readOnly: false,
   examples: ["Start recording this meeting", "Record a meeting called 'Design sync'"],
   inputShape: {
@@ -280,19 +310,47 @@ export const startRecording = defineTool({
     source_app: z.string().optional().describe("zoom | teams | meet | slack | webex | facetime | manual (default manual)"),
   },
   async run(data, args) {
-    const res = await data.startRecording({ title: args.title, source_app: args.source_app ?? "manual" });
-    return {
-      text: `Recording started${res.meeting_id ? ` (meeting ${res.meeting_id})` : ""}${args.title ? `: ${args.title}` : ""}.`,
-      data: { ...res },
-    };
+    try {
+      const res = await data.startRecording({ title: args.title, source_app: args.source_app ?? "manual" });
+      return {
+        text: `Recording started${res.meeting_id ? ` (meeting ${res.meeting_id})` : ""}${args.title ? `: ${args.title}` : ""}.`,
+        data: { ...res, started: true },
+      };
+    } catch (err) {
+      // 403: agents may not start a recording on their own (the setting is off, or the organisation's policy). Ask the
+      // way the Chrome extension and Stream Deck do: Recordist's own card, which the person answers.
+      if (!(err instanceof ApiError && err.status === 403)) throw err;
+      let card: Awaited<ReturnType<RecordistData["promptRecording"]>>;
+      try {
+        card = await data.promptRecording({ title: args.title, source_app: "manual" });
+      } catch (cardErr) {
+        // The card refused too (Recordist 1.0.4 and earlier refuse it while Settings, Detection, Chrome extension is
+        // off). The start's own refusal is the one the person can act on: say it, never the card's internal words.
+        if (cardErr instanceof ApiError && cardErr.status === 403) throw new ApiError(err.status, err.code, `${sentence(err.message)} ${CARD_REFUSED_TOO}`);
+        throw cardErr;
+      }
+      if (card.prompt_id) {
+        return {
+          text: "Recordist is showing its record card on the person's laptop. Nothing records until they answer it there.",
+          data: { started: false, card_shown: true, prompt_id: card.prompt_id },
+        };
+      }
+      const why = card.reason !== undefined && Object.prototype.hasOwnProperty.call(NO_CARD, card.reason) ? NO_CARD[card.reason] : undefined;
+      return {
+        text: why ?? NO_CARD_UNKNOWN,
+        data: { started: false, card_shown: false, ...(card.reason ? { reason: card.reason } : {}) },
+      };
+    }
   },
 });
 
 export const stopRecording = defineTool({
   name: "stop_recording",
   title: "Stop recording",
-  description: "Stop the current recording. Transcription and notes continue in the background. Requires the app to be running.",
+  description:
+    "Stop the recording under way. This ends the person's recording of their call, so only stop it when they ask you to. Transcription and notes continue in the background. Requires the app to be running.",
   readOnly: false,
+  destructive: true,
   examples: ["Stop recording", "End the current meeting"],
   inputShape: {},
   async run(data) {
@@ -316,6 +374,68 @@ export const addMarker = defineTool({
   },
 });
 
+export const proposeAction = defineTool({
+  name: "propose_action",
+  title: "Suggest an action",
+  description:
+    "Suggest an action on the person's record for them to approve in the Recordist app: draft the follow-up (kind draft_followup: meeting_id, optional template_id), mark a promise done (kind mark_promise_done: action_item_id), or export a meeting (kind export_meeting: meeting_id, optional format md|txt|srt|vtt|json). " +
+    "Nothing runs on this call. Recordist shows a card that says exactly what will happen and waits for the person to press Approve or Not now; a suggestion nobody answers runs out. " +
+    "Use `reason` to say why, in one sentence; it is shown on the card in your words. Poll `action_status` for the answer. Requires the app to be running and 'Let connected assistants suggest actions' turned on in Settings → Integrations → Recordist Agent.",
+  readOnly: false,
+  examples: ["Suggest marking the revised-scope promise done", "Suggest exporting yesterday's client call as Markdown", "Suggest drafting the follow-up for meeting 01J8…"],
+  inputShape: {
+    kind: z.enum(["draft_followup", "mark_promise_done", "export_meeting"]),
+    meeting_id: z.string().optional().describe("draft_followup and export_meeting"),
+    action_item_id: z.string().optional().describe("mark_promise_done: the promise's id from get_action_items"),
+    template_id: z.string().optional().describe("draft_followup: the template; default the meeting's own"),
+    format: z.enum(["md", "txt", "srt", "vtt", "json"]).optional().describe("export_meeting: default md"),
+    reason: z.string().max(300).optional().describe("Why you suggest it, in one sentence, shown to the person"),
+    via: z.string().max(60).optional().describe("The assistant's name, shown on the card (for example 'Claude Desktop')"),
+  },
+  async run(data, args) {
+    const action = toProposedAction(args);
+    const res = await data.proposeAction({ action, reason: args.reason, via: args.via });
+    const until = res.expires_at ? ` It waits for an answer until ${formatDate(res.expires_at)}.` : "";
+    return {
+      text: `Suggested in Recordist (${res.id}). Nothing has run: the person sees a card saying exactly what will happen and can press Approve or Not now.${until} Ask action_status for the answer.`,
+      data: { ...res, action },
+    };
+  },
+});
+
+/** The flat tool arguments as the app's action object; a missing id is refused here, before anything reaches the app. */
+export function toProposedAction(a: { kind: string; meeting_id?: string; action_item_id?: string; template_id?: string; format?: string }): ProposedAction {
+  switch (a.kind) {
+    case "draft_followup":
+      if (!a.meeting_id) throw new Error("draft_followup needs meeting_id.");
+      return { kind: "draft_followup", meeting_id: a.meeting_id, ...(a.template_id ? { template_id: a.template_id } : {}) };
+    case "mark_promise_done":
+      if (!a.action_item_id) throw new Error("mark_promise_done needs action_item_id.");
+      return { kind: "mark_promise_done", action_item_id: a.action_item_id };
+    case "export_meeting":
+      if (!a.meeting_id) throw new Error("export_meeting needs meeting_id.");
+      return { kind: "export_meeting", meeting_id: a.meeting_id, ...(a.format ? { format: a.format as ExportFormat } : {}) };
+    default:
+      throw new Error(`Unknown action kind: ${a.kind}`);
+  }
+}
+
+export const actionStatus = defineTool({
+  name: "action_status",
+  title: "What became of a suggestion",
+  description:
+    "The status of an action you suggested with propose_action: proposed (waiting), done, failed, declined (the person said Not now) or expired (nobody answered in time). Only the status and the time of the answer come back; the card's words and any result stay in the app. Requires the app to be running.",
+  readOnly: true,
+  examples: ["Did they approve the suggestion?", "Check suggestion 01J9…"],
+  inputShape: { id: z.string().min(1).describe("The id propose_action returned") },
+  async run(data, args) {
+    const res = await data.proposalStatus(args.id);
+    if (!res) return { text: `Suggestion ${args.id} is no longer in Recordist.`, data: { id: args.id, status: null } };
+    const words: Record<string, string> = { proposed: "is waiting for the person's answer", running: "was approved and is running", done: "was approved and done", failed: "was approved but did not work; the person saw why", declined: "was declined (Not now)", expired: "ran out before it was answered" };
+    return { text: `Suggestion ${res.id} ${words[res.status] ?? res.status}.`, data: { ...res } };
+  },
+});
+
 export const TOOLS: readonly ToolDef[] = [
   listMeetings,
   getMeeting,
@@ -326,6 +446,8 @@ export const TOOLS: readonly ToolDef[] = [
   startRecording,
   stopRecording,
   addMarker,
+  proposeAction,
+  actionStatus,
 ];
 
 export const TOOL_NAMES = TOOLS.map((t) => t.name);

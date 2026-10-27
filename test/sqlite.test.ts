@@ -117,6 +117,7 @@ describe.each(CASES)("SqliteReader (driver=$driver, fts=$fts)", ({ driver, fts }
   it("rejects actions with a clear error", async () => {
     await expect(r.startRecording()).rejects.toBeInstanceOf(AppNotRunningError);
     await expect(r.stopRecording()).rejects.toThrow(/Recordist app is not running/);
+    await expect(r.promptRecording()).rejects.toThrow("Recordist app is not running. To show the record card, open Recordist and try again.");
     await expect(r.addMarker("x")).rejects.toThrow(/not running/);
     await expect(r.regenerateNotes()).rejects.toThrow(/not running/);
   });

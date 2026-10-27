@@ -36,11 +36,11 @@ describe("doctor", () => {
     });
     expect(d.ok).toBe(true);
     expect(d.text).toContain(`data dir:    ${fx.dir}`);
-    expect(d.text).toMatch(/database: .*found — readable, FTS5 available, has meetings/);
+    expect(d.text).toMatch(/database: .*found, readable, FTS5 available, has meetings/);
     expect(d.text).toMatch(/api token: +missing/);
     expect(d.text).toMatch(/local api: .*unreachable/);
     expect(d.text).toContain("sqlite fallback");
-    expect(d.text).toMatch(/http \/ a2a: +will not start — they require the api token/);
+    expect(d.text).toMatch(/http \/ a2a: +will not start: they require the api token/);
     expect(d.text).toContain("--all exits too, stdio included");
   });
 
@@ -57,13 +57,13 @@ describe("doctor", () => {
       delete process.env.RECORDIST_API_TOKEN;
       const fromFile = await doctor(config);
       expect(fromFile.ok).toBe(true);
-      expect(fromFile.text).toContain(`http / a2a:  token required — callers must send "Authorization: Bearer <token>" with the token from ${fx.dir}/api_token`);
+      expect(fromFile.text).toContain(`http / a2a:  token required: callers must send "Authorization: Bearer <token>" with the token from ${fx.dir}/api_token`);
       expect(fromFile.text).not.toContain("e".repeat(64));
 
       process.env.RECORDIST_API_TOKEN = "e".repeat(64);
       const fromEnv = await doctor(config);
       expect(fromEnv.text).toContain("api token:   present [RECORDIST_API_TOKEN]");
-      expect(fromEnv.text).toMatch(/http \/ a2a: +token required — .*from RECORDIST_API_TOKEN/);
+      expect(fromEnv.text).toMatch(/http \/ a2a: +token required: .*from RECORDIST_API_TOKEN/);
       expect(fromEnv.text).not.toContain("e".repeat(64));
 
       // A blank variable is ignored by loadConfig, so both lines must name the file.

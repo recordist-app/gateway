@@ -12,8 +12,8 @@ export class AppNotRunningError extends RecordistError {
   constructor(action?: string) {
     super(
       "app_not_running",
-      `Recordist app is not running${action ? ` — cannot ${action}` : ""}. ` +
-        "Start the Recordist desktop app and try again. (Reads still work from the local database.)",
+      `Recordist app is not running. ${action ? `To ${action}, open` : "Open"} Recordist and try again. ` +
+        "Reading meetings still works without it.",
     );
     this.name = "AppNotRunningError";
   }
