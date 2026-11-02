@@ -4,13 +4,13 @@
     "name": "Recordist",
     "email": "hello@recordist.app"
   },
-  "description": "Recordist for Claude Code: ask about your calls, from the record Recordist keeps on your laptop.",
+  "description": "Recordist for Claude Code: ask about your calls, from the record Recordist keeps for you.",
   "plugins": [
     {
       "name": "recordist",
       "source": "./plugins/recordist",
-      "description": "Ask Claude about your calls, from the record Recordist keeps on your laptop.",
-      "version": "0.1.7",
+      "description": "Ask Claude about your calls, from the record Recordist keeps for you.",
+      "version": "0.1.10",
       "author": {
         "name": "Recordist",
         "url": "https://recordist.app"

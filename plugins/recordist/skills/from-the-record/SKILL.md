@@ -5,7 +5,7 @@ description: Answer questions about the user's past calls from the record Record
 
 # From the record
 
-Recordist keeps the record of the user's calls on their laptop: transcripts with speakers and times, notes, and action items. Answer from that record, and show where each answer comes from.
+Recordist keeps the record of the user's calls on their own machine: transcripts with speakers and times, notes, and action items. Answer from that record, and show where each answer comes from.
 
 1. **Find the call.** Use `search_meetings` for a topic, a name or a phrase, and `list_meetings` with `from` and `to` for "yesterday" or "this week". If more than one call fits, name them and ask which one.
 2. **Read before answering.** `get_meeting` gives the notes and action items. `get_transcript` with `format` set to `md` gives the words. Read the transcript whenever the user asks what someone said or agreed to.
@@ -13,6 +13,6 @@ Recordist keeps the record of the user's calls on their laptop: transcripts with
 4. **Action items.** `get_action_items` with `open_only` lists what is still open. Keep each owner as the record has it.
 5. **Follow-up email.** Build it from the notes, the action items and quoted lines, and from nothing else. Give each commitment with its owner and date as they were said. Leave it as a draft for the user to send.
 
-`start_recording`, `stop_recording` and `add_marker` act on the user's laptop. Use them when the user asks for it in this conversation, and not otherwise. `start_recording` works once the user turns on Allow agents to start recordings in Recordist's Settings, Integrations; if it is refused, tell them where the setting is and leave the choice to them. When a recording starts, remind the user that the people on the call may need to be told.
+`start_recording`, `stop_recording` and `add_marker` act on the user's machine. Use them when the user asks for it in this conversation, and not otherwise. `start_recording` works once the user turns on Allow agents to start recordings in Recordist's Settings, Integrations; if it is refused, tell them where the setting is and leave the choice to them. When a recording starts, remind the user that the people on the call may need to be told.
 
-If the Recordist tools are not available here, explain that they run on the laptop where Recordist is installed, in Claude Code or in a Cowork session on that laptop, and that Recordist needs to have been opened there once.
+If the Recordist tools are not available here, explain that they run on the machine where Recordist is installed, in Claude Code or in a Cowork session on that laptop, and that Recordist needs to have been opened there once.
