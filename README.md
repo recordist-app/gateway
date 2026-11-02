@@ -3,11 +3,11 @@
 [![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/recordist-app/gateway) [![Glama score](https://glama.ai/mcp/servers/recordist-app/gateway/badges/score.svg)](https://glama.ai/mcp/servers/recordist-app/gateway)
 
 MCP server + A2A agent for **Recordist** (https://recordist.app), the app that
-writes notes from your calls on your own laptop, with no bot in the call. It lets
-Claude Desktop, Claude Code, Cursor and other agents read and act on the meetings
-recorded on your laptop.
+writes notes from your calls on-device, with no bot in the call. It lets Claude
+Desktop, Claude Code, Cursor and other agents read and act on the meetings you
+recorded, where they are kept.
 
-Get the free Recordist app for Mac, with Windows and Linux in preview:
+Get the free Recordist app for Mac, Windows and Linux:
 **https://recordist.app/download?from=npm**
 
 - **Reads** (list, get, transcript, search, action items) work whether or not the
@@ -18,7 +18,7 @@ Get the free Recordist app for Mac, with Windows and Linux in preview:
 - **Recording asks first.** `start_recording` starts at once only when
   **Allow agents to start recordings** is on in Recordist's Settings, then
   Integrations (off by default). Otherwise Recordist shows its own record card on
-  the laptop, as it does for the Chrome extension and Stream Deck, and nothing
+  screen, as it does for the Chrome extension and Stream Deck, and nothing
   records until the person answers it. Recordist 1.0.4 and earlier show that card
   only while the Chrome extension switch is on in Settings, then Detection; with
   both off, the agent is told the recording did not start and the person can
@@ -257,14 +257,14 @@ for search when present, with a `LIKE` fallback otherwise.
   separate them from you.
 - The API token is read from `<data>/api_token`, which the app writes with
   mode `0600`. `--doctor` warns if the file is group/world readable. Never commit
-  or share it; anyone with the token can control recording on your laptop.
+  or share it; anyone with the token can control recording on that machine.
 - The SQLite database is opened read-only; the gateway never modifies it.
 - No telemetry. The gateway makes no network calls other than to the Recordist
   app's local API.
 
 ## Privacy
 
-The gateway and the extension talk to the Recordist app on your laptop, on
+The gateway and the extension talk to the Recordist app on the same machine, on
 `127.0.0.1`, and to nothing else. They send nothing to Recordist and have no
 telemetry. What a tool
 returns goes to the assistant that called it, which may send it to its own
@@ -286,6 +286,10 @@ locked versions, leaves out `better-sqlite3` so the bundle carries no native
 code, then validates and packs it with the official `@anthropic-ai/mcpb` CLI.
 Claude Desktop runs the extension with the Node it ships, so reads with
 Recordist closed use `node:sqlite`.
+
+## Changes in 0.1.9
+
+- The README says what Recordist is today: on Mac, Windows and Linux, notes written on-device.
 
 ## Changes in 0.1.8
 
@@ -396,7 +400,7 @@ await listen(http, 47322);
 ## About
 
 The gateway is the small, open bridge between your AI assistant and the copy of
-[Recordist](https://recordist.app) running on your own laptop. It contains no
+[Recordist](https://recordist.app) running on your own machine. It contains no
 app code and no keys; it can only reach the local API on the machine it runs on.
 Issues and questions: support@recordist.app. Security reports: security@recordist.app
 (see SECURITY.md). Made by Recordist, a small independent studio in Ontario, Canada.
