@@ -3,7 +3,7 @@
  *
  * The app's data folder:
  *   macOS   ~/Library/Application Support/app.recordist.desktop/
- *   Windows %APPDATA%\app.recordist.desktop\
+ *   Windows %LOCALAPPDATA%\app.recordist.desktop\ (where the Windows app keeps it; 0.1.9 and earlier looked in %APPDATA%)
  *   Linux   ~/.local/share/app.recordist.desktop/
  *
  * Overrides (env): RECORDIST_DATA_DIR, RECORDIST_API_URL, RECORDIST_API_TOKEN.
@@ -36,8 +36,8 @@ export function defaultDataDir(
     case "darwin":
       return path.join(home, "Library", "Application Support", BUNDLE_ID);
     case "win32": {
-      const appData = env.APPDATA ?? path.join(home, "AppData", "Roaming");
-      return path.join(appData, BUNDLE_ID);
+      const localAppData = env.LOCALAPPDATA ?? path.join(home, "AppData", "Local");
+      return path.join(localAppData, BUNDLE_ID);
     }
     default: {
       const xdg = env.XDG_DATA_HOME;

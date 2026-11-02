@@ -3,7 +3,7 @@
   "manifest_version": "0.3",
   "name": "recordist",
   "display_name": "Recordist",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Ask Claude about your calls. It reads the notes, transcripts and action items Recordist keeps on your laptop, and the record stays with you.",
   "long_description": "Recordist writes notes from your calls on your laptop, with no bot in the call. This extension lets Claude read that record: search every call, open a meeting's notes and transcript, list the action items, and draft the follow-up from what was said.\n\n**The record stays with you.** The extension talks to the Recordist app on your laptop, at 127.0.0.1, and to nothing else. It sends nothing to Recordist. Claude reads what it needs to answer you, and handles it as it handles anything you type.\n\n**What you need.** Recordist on your laptop, opened at least once: https://recordist.app/download. Reading and searching work while Recordist is closed. Writing new notes, adding a marker and starting or stopping a recording need it open. New notes use the provider you chose in Recordist's Settings, AI notes. Claude can start a recording once you turn on Allow agents to start recordings in Recordist's Settings, Integrations; it is off until you do.\n\n**Try asking:**\n- What did I agree to in yesterday's calls?\n- Draft the follow-up to my call with Dana, from what we said.\n- When did we last talk about the renewal, and who raised it?",
   "author": {

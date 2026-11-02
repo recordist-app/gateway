@@ -225,7 +225,7 @@ Logs go to stderr; stdout is reserved for the stdio MCP transport.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `RECORDIST_DATA_DIR` | macOS `~/Library/Application Support/app.recordist.desktop`<br>Windows `%APPDATA%\app.recordist.desktop`<br>Linux `~/.local/share/app.recordist.desktop` | Where `recordist.db` and `api_token` live |
+| `RECORDIST_DATA_DIR` | macOS `~/Library/Application Support/app.recordist.desktop`<br>Windows `%LOCALAPPDATA%\app.recordist.desktop`<br>Linux `~/.local/share/app.recordist.desktop` | Where `recordist.db` and `api_token` live |
 | `RECORDIST_API_URL` | `http://127.0.0.1:47321` | Local API base URL |
 | `RECORDIST_API_TOKEN` | contents of `<data>/api_token` | Bearer token for the local API, and the token `--http` and `--a2a` require from callers |
 
@@ -286,6 +286,10 @@ locked versions, leaves out `better-sqlite3` so the bundle carries no native
 code, then validates and packs it with the official `@anthropic-ai/mcpb` CLI.
 Claude Desktop runs the extension with the Node it ships, so reads with
 Recordist closed use `node:sqlite`.
+
+## Changes in 0.1.10
+
+- On Windows the gateway finds your meetings without `RECORDIST_DATA_DIR`: it reads `%LOCALAPPDATA%\app.recordist.desktop`, where the Windows app keeps them (0.1.9 and earlier looked in `%APPDATA%`).
 
 ## Changes in 0.1.9
 

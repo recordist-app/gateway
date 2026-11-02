@@ -10,8 +10,8 @@ describe("config", () => {
     expect(defaultDataDir("darwin", { HOME: "/Users/me" })).toBe("/Users/me/Library/Application Support/app.recordist.desktop");
     expect(defaultDataDir("linux", { HOME: "/home/me" })).toBe("/home/me/.local/share/app.recordist.desktop");
     expect(defaultDataDir("linux", { HOME: "/home/me", XDG_DATA_HOME: "/xdg" })).toBe("/xdg/app.recordist.desktop");
-    expect(defaultDataDir("win32", { APPDATA: "C:\\Users\\me\\AppData\\Roaming" })).toBe(
-      path.join("C:\\Users\\me\\AppData\\Roaming", "app.recordist.desktop"),
+    expect(defaultDataDir("win32", { LOCALAPPDATA: "C:\\Users\\me\\AppData\\Local", APPDATA: "C:\\Users\\me\\AppData\\Roaming" })).toBe(
+      path.join("C:\\Users\\me\\AppData\\Local", "app.recordist.desktop"),
     );
   });
 
