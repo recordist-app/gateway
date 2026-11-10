@@ -1,6 +1,6 @@
 ---
 name: from-the-record
-description: Answer questions about the user's past calls from the record Recordist keeps, and draft follow-ups from what was said. Use when the Recordist tools are connected and the user asks what was said, decided or agreed on a call, when something was discussed, what their action items are, or for a follow-up email after a call.
+description: Answer questions about the user's past calls from the record Recordist keeps, and draft follow-ups from what was said. Use when the user asks what was said, decided or agreed on a call, when something was discussed, what their action items are, or for a follow-up email after a call.
 ---
 
 # From the record
@@ -15,4 +15,4 @@ Recordist keeps the record of the user's calls on their own machine: transcripts
 
 `start_recording`, `stop_recording` and `add_marker` act on the user's machine. Use them when the user asks for it in this conversation, and not otherwise. `start_recording` works once the user turns on Allow agents to start recordings in Recordist's Settings, Integrations; if it is refused, tell them where the setting is and leave the choice to them. When a recording starts, remind the user that the people on the call may need to be told.
 
-If the Recordist tools are not available here, explain that they run on the machine where Recordist is installed, in Claude Code or in a Cowork session on that laptop, and that Recordist needs to have been opened there once.
+If the Recordist tools are not available here, say so plainly and do not guess at what was said on a call. The tools come from the open-source Recordist gateway, which the user connects themselves on the machine where Recordist is installed. The steps are at https://recordist.app/developers.

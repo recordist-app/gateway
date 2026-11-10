@@ -8,9 +8,9 @@
   "plugins": [
     {
       "name": "recordist",
-      "source": "./plugins/recordist",
+      "source": "./plugins/recordist-connect",
       "description": "Ask Claude about your calls, from the record Recordist keeps for you.",
-      "version": "0.1.10",
+      "version": "0.1.11",
       "author": {
         "name": "Recordist",
         "url": "https://recordist.app"

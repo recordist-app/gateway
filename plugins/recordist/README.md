@@ -1,30 +1,26 @@
 # Recordist
 
 Recordist writes notes from your calls on-device, with no bot in the call, on Mac, Windows and Linux.
-This plugin lets Claude read that record: search every call, open a meeting's
+With the tools connected, this plugin lets Claude read that record: search every call, open a meeting's
 notes and transcript, list the action items, and draft the follow-up from what
 was said, quoting who said it and when.
 
 ## Install
 
-In Claude Code:
+In Claude Code, from the plugin directory, or with `/plugin install`.
+
+## Connect the tools
+
+This plugin is a skill. It contains no server and starts nothing on your machine. To let Claude read the record, connect the
+open-source Recordist gateway yourself, on the machine where Recordist is installed:
 
 ```
-/plugin install recordist --marketplace recordist-app/gateway
+claude mcp add recordist -- npx -y @recordist/gateway@0.1.10
 ```
 
-## What it runs
-
-The plugin starts the open-source Recordist gateway, `@recordist/gateway`
-version 0.1.10 from npm, with `npx`. Its source is in this repository,
-https://github.com/recordist-app/gateway. The gateway is an MCP server that
-talks to the Recordist app on the same machine, at `127.0.0.1`, and to nothing
-else, with the token the app keeps in its own data folder. When Recordist is closed, it reads
-the app's database read-only.
-
-It runs in Claude Code, and in Cowork sessions on the machine where Recordist is
-installed. It needs Node.js 20 or later, and Recordist opened there at least
-once: https://recordist.app/download
+The source of the gateway is at https://github.com/recordist-app/gateway. It is an MCP server that talks to the Recordist app on
+the same machine, at `127.0.0.1`, and to nothing else. It needs Node.js 20 or later, and Recordist opened there at least once:
+https://recordist.app/download
 
 ## Use it
 
