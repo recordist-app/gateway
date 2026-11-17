@@ -81,9 +81,9 @@ claude mcp add --transport http recordist http://127.0.0.1:47322/mcp \
 
 ### Claude Code plugin
 
-This repository is also a Claude Code plugin marketplace. The plugin in
-[`plugins/recordist`](plugins/recordist) starts this gateway, pinned to a
-published version, and adds a skill for answering from the record:
+This repository is also a Claude Code plugin marketplace. Its plugin, in
+[`plugins/recordist-connect`](plugins/recordist-connect), starts this gateway,
+pinned to a published version, and adds a skill for answering from the record:
 
 ```
 /plugin install recordist --marketplace recordist-app/gateway
@@ -92,6 +92,9 @@ published version, and adds a skill for answering from the record:
 On Claude Code before 2.1.275, add the marketplace first:
 `/plugin marketplace add recordist-app/gateway`, then
 `/plugin install recordist@recordist`.
+
+[`plugins/recordist`](plugins/recordist) is the skill alone, with no server. With it,
+connect the gateway yourself, as in [Claude Code](#claude-code).
 
 ### Cursor
 
@@ -252,19 +255,19 @@ for search when present, with a `LIKE` fallback otherwise.
   cloud model, so connect only an assistant you trust with your meetings.
 - `--http` and `--a2a` require `Authorization: Bearer <api_token>` on every
   request (the A2A Agent Card excepted), compared in constant time, so other
-  user accounts on the machine cannot read meetings through them. Programs
+  user accounts on the device cannot read meetings through them. Programs
   running under your own account can read `api_token`, so the token does not
   separate them from you.
 - The API token is read from `<data>/api_token`, which the app writes with
   mode `0600`. `--doctor` warns if the file is group/world readable. Never commit
-  or share it; anyone with the token can control recording on that machine.
+  or share it; anyone with the token can control recording on that device.
 - The SQLite database is opened read-only; the gateway never modifies it.
 - No telemetry. The gateway makes no network calls other than to the Recordist
   app's local API.
 
 ## Privacy
 
-The gateway and the extension talk to the Recordist app on the same machine, on
+The gateway and the extension talk to the Recordist app on the same device, on
 `127.0.0.1`, and to nothing else. They send nothing to Recordist and have no
 telemetry. What a tool
 returns goes to the assistant that called it, which may send it to its own
@@ -332,13 +335,13 @@ Recordist closed use `node:sqlite`.
   goes. The gateway itself talks only to the Recordist app on `127.0.0.1` and
   listens on loopback by default. What it returns goes to the AI assistant you
   connect, which may send it to its own cloud model. Earlier versions said that
-  nothing leaves your machine. That is true of the gateway alone, and a cloud
+  nothing left your device. That was true of the gateway alone, and a cloud
   assistant sends what it reads to its provider.
 - The README says the gateway binds `127.0.0.1` by default and that `--host`
   is for containers, where it used to say the gateway only ever binds
   `127.0.0.1`.
-- The Recordist app is described as available for Macs with Apple silicon,
-  which is the only build published.
+- The Recordist app was then described as available for Macs with Apple
+  silicon, the only build published at the time.
 - `start_recording` names the setting as the app shows it: **Allow agents to
   start recordings**, in Settings → Integrations.
 - Every command in the README and in `--help` uses the scoped name,
@@ -404,7 +407,7 @@ await listen(http, 47322);
 ## About
 
 The gateway is the small, open bridge between your AI assistant and the copy of
-[Recordist](https://recordist.app) running on your own machine. It contains no
-app code and no keys; it can only reach the local API on the machine it runs on.
+[Recordist](https://recordist.app) running on your own device. It contains no
+app code and no keys; it can only reach the local API on the device it runs on.
 Issues and questions: support@recordist.app. Security reports: security@recordist.app
-(see SECURITY.md). Made by Recordist, a small independent studio in Ontario, Canada.
+(see SECURITY.md). Made by Recordist, an independent studio.

@@ -58,7 +58,7 @@ export function createMcpServer(data: RecordistData, opts: McpServerOptions = {}
     { name: "recordist", title: "Recordist", version: opts.version ?? "0.0.0" },
     {
       instructions:
-        "Recordist is a local-first meeting recorder. Use list_meetings / search_meetings to find meetings, get_meeting for notes and action items, get_transcript for the full text. " +
+        "Recordist keeps the memory of a person's calls on their own device: the recordings, transcripts, notes and action items they chose to keep. Use list_meetings / search_meetings to find meetings, get_meeting for notes and action items, get_transcript for the full text. " +
         "Recording controls (start_recording, stop_recording, add_marker) and regenerate_notes need the Recordist desktop app to be running; reads also work offline from the local database. " +
         "start_recording starts at once only when the person allowed agents to; otherwise Recordist asks them on its own card. Stop a recording only when the person asks. " +
         `Meetings are also exposed as resources: ${MEETING_URI_TEMPLATE} and ${TRANSCRIPT_URI_TEMPLATE}.`,

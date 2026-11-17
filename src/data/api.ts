@@ -39,7 +39,7 @@ export interface ApiClientOptions {
 }
 
 /**
- * The app answers a stop only once the last of the transcript is written, which on a busy laptop can take far longer
+ * The app answers a stop only once the last of the transcript is written, which on a busy device can take far longer
  * than an ordinary request. The recording itself ends at once.
  */
 export const STOP_TIMEOUT_MS = 30_000;

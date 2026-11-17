@@ -2,7 +2,7 @@
   "identifier": "recordist-app-gateway",
   "name": "Recordist",
   "version": "0.1.10",
-  "description": "Read and search the meetings Recordist recorded on your own computer, with their transcripts, notes and action items, and start or stop a recording. The gateway talks only to the Recordist app on 127.0.0.1 and listens on loopback by default. What it returns goes to the AI assistant you connect, which may send it to its own cloud model.",
+  "description": "Read and search the calls Recordist keeps on your own devices, with their transcripts, notes and action items, and start or stop a recording. The gateway talks only to the Recordist app on 127.0.0.1 and listens on loopback by default. What it returns goes to the AI assistant you connect, which may send it to its own cloud model.",
   "category": "productivity",
   "homepage": "https://recordist.app/?from=mcp",
   "icon": "https://raw.githubusercontent.com/recordist-app/gateway/main/media/logo-400.png",
@@ -14,7 +14,7 @@
     { "name": "get_transcript", "description": "Read a meeting's transcript." },
     { "name": "search_meetings", "description": "Full-text search across transcripts and notes." },
     { "name": "get_action_items", "description": "List action items across meetings, optionally only the open ones." },
-    { "name": "start_recording", "description": "Start a recording. Works only when Allow agents to start recordings is on in Recordist's Settings → Integrations; it is off by default." },
+    { "name": "start_recording", "description": "Start a recording. With Allow agents to start recordings on in Recordist's Settings → Integrations (off by default), it starts at once; otherwise Recordist shows its record card and nothing records until the person answers it." },
     { "name": "stop_recording", "description": "Stop the current recording." },
     { "name": "add_marker", "description": "Add a marker at the current moment of a recording." },
     { "name": "regenerate_notes", "description": "Regenerate a meeting's notes with a template, using the AI provider set in Recordist, which may be a cloud service." }

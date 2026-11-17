@@ -76,7 +76,7 @@ describe("start_recording: consent first", () => {
     const { data, prompts } = app({ start: async () => { throw refused; } });
     const r = await startRecording.run(data, { title: "Design sync", source_app: "zoom" });
     expect(prompts).toEqual([{ title: "Design sync", source_app: "manual" }]);
-    expect(r.text).toBe("Recordist is showing its record card on the person's laptop. Nothing records until they answer it there.");
+    expect(r.text).toBe("Recordist is showing its record card on the person's device. Nothing records until they answer it there.");
     expect(r.data).toEqual({ started: false, card_shown: true, prompt_id: "p1" });
   });
 

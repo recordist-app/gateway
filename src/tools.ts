@@ -302,7 +302,7 @@ export const startRecording = defineTool({
   title: "Start recording",
   description:
     "Record a meeting via the Recordist app. If the person turned on 'Allow agents to start recordings' in Recordist (Settings, Integrations), the recording starts at once. " +
-    "Otherwise, the safe default, Recordist shows its own record card on the person's laptop and nothing records until they answer it; the result says which happened. Requires the app to be running.",
+    "That setting is off by default, and while it is off Recordist shows its own record card on the person's device and nothing records until they answer it; the result says which happened. Requires the app to be running.",
   readOnly: false,
   examples: ["Start recording this meeting", "Record a meeting called 'Design sync'"],
   inputShape: {
@@ -331,7 +331,7 @@ export const startRecording = defineTool({
       }
       if (card.prompt_id) {
         return {
-          text: "Recordist is showing its record card on the person's laptop. Nothing records until they answer it there.",
+          text: "Recordist is showing its record card on the person's device. Nothing records until they answer it there.",
           data: { started: false, card_shown: true, prompt_id: card.prompt_id },
         };
       }
